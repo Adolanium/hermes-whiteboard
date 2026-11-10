@@ -1,0 +1,16 @@
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor noise
+.vscode/
+.idea/
+*.swp
+
+# Nothing here is built, but keep these out if tooling ever lands
+node_modules/
+*.log
+
+# Python bytecode from the capability probe
+__pycache__/

@@ -1,0 +1,9 @@
+{
+  "name": "whiteboard",
+  "label": "Whiteboard",
+  "description": "Lets chats read Whiteboard boards and send them new boards or proposed changes",
+  "icon": "Presentation",
+  "tab": { "path": "/whiteboard", "hidden": true },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

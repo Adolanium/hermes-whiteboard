@@ -1,0 +1,18 @@
+name: whiteboard
+version: "0.1.0"
+description: "An agentic whiteboard. Say what you're planning and Hermes lays it out as a route, columns or a map, with hand-drawn stickers. Throw in rough notes and Hermes proposes groups, owners and action items you accept one by one. Hand an action item to Hermes and an agent does it on the board, with its own cursor, and delivers the result next to the note. Once you allow it, any chat can read your boards and propose changes."
+author: Adolanium
+license: MIT
+homepage: https://github.com/Adolanium/hermes-whiteboard
+manifest_version: 1
+kind: standalone
+requires_hermes: ">=0.22.6"
+
+provides_tools:
+  - whiteboard_list     # the person's boards (tools.py)
+  - whiteboard_read     # sections and notes of one board
+  - whiteboard_propose  # notes, groups and action items, waiting for review on the board
+  - whiteboard_create   # a new board from a plan worked out in chat
+provides_hooks: []
+provides_middleware: []
+requires_env: []

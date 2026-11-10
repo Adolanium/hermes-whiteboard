@@ -1,0 +1,7 @@
+# Everything in this repo is LF, and it has to stay LF. The deployment check
+# compares the SHA256 of desktop/plugin.js against the installed copy, so a checkout
+# that rewrote line endings would report a mismatch on an unmodified file.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
