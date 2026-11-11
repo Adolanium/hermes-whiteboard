@@ -20,7 +20,7 @@
  *    colors through var(--ui-*) or hsl(), never a hex literal.
  */
 
-import { atom, host, icons, PALETTE_AREA, ROUTES_AREA, SIDEBAR_NAV_AREA, Streamdown, Tip, useValue } from '@hermes/plugin-sdk'
+import { atom, host, icons, PALETTE_AREA, ROUTES_AREA, SIDEBAR_NAV_AREA, Streamdown, Tip, usePluginI18n, useValue } from '@hermes/plugin-sdk'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
@@ -57,13 +57,143 @@ const T = {
 
 /** Note tones. Paper colours, so a note keeps its colour in a dark theme the
  *  way a real sticky note would. */
+// ---------------------------------------------------------------------------
+// Copy. Every string the board shows lives here and resolves against the app's
+// active locale (`display.language`), so the plugin reads in the same language
+// as the rest of Hermes. English is the fallback for every key, so a missing
+// translation never leaves a hole; adding a language is one more bundle.
+// ---------------------------------------------------------------------------
+const MESSAGES = {
+  en: {
+    nav: 'Whiteboard',
+    openCommand: 'Open Whiteboard',
+    appName: 'Whiteboard',
+    appDescription: 'An agentic whiteboard. Tell Hermes what you are planning and it lays it out, groups your notes, and sends agents to do the action items.',
+    'empty.title': 'Think it through.',
+    'empty.body': 'Tell Hermes what you are planning and it lays it out. Throw notes on the board and it finds the groups. Hand it an action item and an agent does the work right here.',
+    'empty.tip': 'Or double-click anywhere to add a note. Press P to draw.',
+    'starter.route': 'Plan a product launch in six weeks',
+    'starter.columns': 'Retro for our last sprint',
+    'starter.map': 'Ideas for a team offsite',
+    'compose.placeholder': 'Tell Hermes what you are planning, and it lays it out',
+    'compose.askThis': 'Ask Hermes about this',
+    'compose.askThese': n => `Ask Hermes about these ${n} items`,
+    'compose.askingAbout': n => `Asking about ${n} selected`,
+    'compose.ask': 'Ask',
+    'compose.lay': 'Lay it out',
+    'compose.anyShape': 'Any shape',
+    'compose.enterHint': 'Enter to lay it out',
+    'compose.escHint': 'Esc to lay out',
+    'compose.askMissing': 'What is missing?',
+    'compose.askFirst': 'What comes first?',
+    'compose.askSum': 'Sum this up',
+    'panel.suggestions': 'Suggestions',
+    'panel.groupMine': 'Group my notes',
+    'panel.reading': 'Hermes is reading your notes',
+    'panel.empty': 'Nothing waiting. Click Group my notes, or let a chat suggest changes once chats can read your boards. Every suggestion waits here until you accept or skip it.',
+    'tool.note': 'Note (N, or double-click the board)',
+    'tool.group': 'Group',
+    'tool.text': 'Text',
+    'tool.pen': 'Draw (P)',
+    'tool.select': 'Select an area, then ask Hermes about it (L)',
+    'tool.hand': 'Hand to Hermes',
+    'tool.makeAction': 'Make it an action item',
+    'tool.notAction': 'Not an action item',
+    'tool.duplicate': 'Duplicate (Cmd D)',
+    'tool.unlink': 'Remove its arrows',
+    'tool.delete': 'Delete (Backspace)',
+    'zoom.out': 'Zoom out',
+    'zoom.in': 'Zoom in',
+    'zoom.fit': 'Fit the board',
+    'toast.nothingToRun': 'Nothing to run yet. Mark a note as an action, or let Hermes suggest some with Group my notes.',
+    'layout.columns': 'Columns',
+    'layout.map': 'Map',
+    'layout.route': 'Route',
+    'layout.columns.hint': 'Groups side by side, like a retro or a plan by team',
+    'layout.map.hint': 'Ideas around one centre, like a brainstorm',
+    'layout.route.hint': 'Steps in order along a road, like a launch or a trip',
+    'tone.butter': 'Butter',
+    'tone.peach': 'Peach',
+    'tone.mint': 'Mint',
+    'tone.sky': 'Sky',
+    'tone.lilac': 'Lilac',
+    'tone.paper': 'Paper',
+    'group.newTitle': 'New group'
+  },
+  zh: {
+    nav: '白板',
+    openCommand: '打开白板',
+    appName: '白板',
+    appDescription: '一个会自己干活的画布：说清你在筹划什么，它排版、分组，再派 agent 去做行动项。',
+    'empty.title': '仔细想一遍。',
+    'empty.body': '跟 Hermes 说你在筹划什么，它就把想法铺到画布上。随手丢几条便签，它会找出分组。把一条标成行动项，agent 就在这块板上把它做掉。',
+    'empty.tip': '也可以双击空白处新建便签，按 P 画画。',
+    'starter.route': '六周内上线一个产品',
+    'starter.columns': '上一次迭代复盘',
+    'starter.map': '团队团建点子',
+    'compose.placeholder': '说清你在筹划什么，它来排版',
+    'compose.askThis': '就这条问 Hermes',
+    'compose.askThese': n => `就这 ${n} 条问 Hermes`,
+    'compose.askingAbout': n => `正在就选中的 ${n} 条提问`,
+    'compose.ask': '提问',
+    'compose.lay': '排版',
+    'compose.anyShape': '自由排布',
+    'compose.enterHint': '回车让它排版',
+    'compose.escHint': 'Esc 让它排版',
+    'compose.askMissing': '还缺什么？',
+    'compose.askFirst': '先做哪个？',
+    'compose.askSum': '总结一下',
+    'panel.suggestions': '建议',
+    'panel.groupMine': '帮我分组',
+    'panel.reading': 'Hermes 正在读你的便签',
+    'panel.empty': '这里还没有内容。点「帮我分组」，或者在允许聊天读取白板后让对话提建议。所有建议都先停在这里，等你接受或跳过。',
+    'tool.note': '便签（N 或双击画布）',
+    'tool.group': '分组',
+    'tool.text': '文字',
+    'tool.pen': '画笔（P）',
+    'tool.select': '框选一块，然后问 Hermes（L）',
+    'tool.hand': '交给 Hermes',
+    'tool.makeAction': '设为行动项',
+    'tool.notAction': '取消行动项',
+    'tool.duplicate': '复制一份（Cmd D）',
+    'tool.unlink': '删除它的箭头',
+    'tool.delete': '删除（Backspace）',
+    'zoom.out': '缩小',
+    'zoom.in': '放大',
+    'zoom.fit': '适应画布',
+    'toast.nothingToRun': '还没有可执行的东西。把某条便签标成行动项，或者用「帮我分组」让 Hermes 提几个。',
+    'layout.columns': '分栏',
+    'layout.map': '发散图',
+    'layout.route': '路线',
+    'layout.columns.hint': '并排分组，像复盘或按团队分的计划',
+    'layout.map.hint': '围绕一个中心发散，像头脑风暴',
+    'layout.route.hint': '按顺序排成一条路，像上线计划或行程',
+    'tone.butter': '黄油色',
+    'tone.peach': '蜜桃色',
+    'tone.mint': '薄荷绿',
+    'tone.sky': '天蓝',
+    'tone.lilac': '丁香紫',
+    'tone.paper': '纸白',
+    'group.newTitle': '未命名分组'
+  }
+}
+
+/** Module-level translator: for handlers, toasts and the static labels the app
+ *  reads once at registration. Mirrors the app translator — active locale, then
+ *  this plugin's English, then the key. */
+let tr = (key, ...args) => {
+  const value = MESSAGES.en[key]
+
+  return typeof value === 'function' ? value(...args) : (value ?? key)
+}
+
 const TONES = {
-  butter: { label: 'Butter', paper: 'hsl(47 96% 84%)', edge: 'hsl(43 80% 66%)' },
-  peach: { label: 'Peach', paper: 'hsl(22 96% 87%)', edge: 'hsl(18 78% 72%)' },
-  mint: { label: 'Mint', paper: 'hsl(150 52% 84%)', edge: 'hsl(152 38% 66%)' },
-  sky: { label: 'Sky', paper: 'hsl(205 86% 88%)', edge: 'hsl(208 62% 72%)' },
-  lilac: { label: 'Lilac', paper: 'hsl(266 72% 90%)', edge: 'hsl(266 46% 76%)' },
-  paper: { label: 'Paper', paper: 'hsl(40 40% 98%)', edge: 'hsl(36 18% 80%)' }
+  butter: { labelKey: 'tone.butter', paper: 'hsl(47 96% 84%)', edge: 'hsl(43 80% 66%)' },
+  peach: { labelKey: 'tone.peach', paper: 'hsl(22 96% 87%)', edge: 'hsl(18 78% 72%)' },
+  mint: { labelKey: 'tone.mint', paper: 'hsl(150 52% 84%)', edge: 'hsl(152 38% 66%)' },
+  sky: { labelKey: 'tone.sky', paper: 'hsl(205 86% 88%)', edge: 'hsl(208 62% 72%)' },
+  lilac: { labelKey: 'tone.lilac', paper: 'hsl(266 72% 90%)', edge: 'hsl(266 46% 76%)' },
+  paper: { labelKey: 'tone.paper', paper: 'hsl(40 40% 98%)', edge: 'hsl(36 18% 80%)' }
 }
 const TONE_ORDER = ['butter', 'peach', 'mint', 'sky', 'lilac', 'paper']
 const INK = 'hsl(232 26% 17%)'
@@ -1051,9 +1181,9 @@ function toggleAction(ids) {
 
 const LAYOUTS = ['route', 'columns', 'map']
 const LAYOUT_META = {
-  columns: { hint: 'Groups side by side, like a retro or a plan by team', label: 'Columns' },
-  map: { hint: 'Ideas around one centre, like a brainstorm', label: 'Map' },
-  route: { hint: 'Steps in order along a road, like a launch or a trip', label: 'Route' }
+  columns: { hint: 'layout.columns.hint', label: 'layout.columns' },
+  map: { hint: 'layout.map.hint', label: 'layout.map' },
+  route: { hint: 'layout.route.hint', label: 'layout.route' }
 }
 const WAYPOINT_W = 244
 const WAYPOINT_H = 138
@@ -2399,7 +2529,7 @@ async function runPlan() {
   }
 
   if (!stops.some(stop => stop.notes.length > 0)) {
-    $toast.set({ kind: 'info', text: 'Nothing to run yet. Mark a note as an action, or let Hermes suggest some with Group my notes.' })
+    $toast.set({ kind: 'info', text: tr('toast.nothingToRun') })
 
     return false
   }
@@ -4285,14 +4415,14 @@ function TopBar({ board }) {
           disabled: tidy.busy || notes < 2,
           onClick: () => void tidyNotes(),
           type: 'button',
-          children: [jsx(Line, { name: 'wand' }), tidy.busy ? 'Hermes is reading your notes' : 'Group my notes']
+          children: [jsx(Line, { name: 'wand' }), tidy.busy ? t('panel.reading') : t('panel.groupMine')]
         })
       }),
       jsxs('button', {
         className: 'wb-btn',
         onClick: () => $panel.set(!panel),
         type: 'button',
-        children: ['Suggestions', pending > 0 ? jsx('span', { className: 'wb-badge', children: String(pending) }) : null]
+        children: [t('panel.suggestions'), pending > 0 ? jsx('span', { className: 'wb-badge', children: String(pending) }) : null]
       }),
       jsx(Tip, {
         label: 'Export',
@@ -4345,6 +4475,7 @@ function TopBar({ board }) {
 }
 
 function Toolbar() {
+  const t = usePluginI18n('whiteboard')
   const selection = useValue($selection)
   const board = useValue($board)
   const active = useValue($tool)
@@ -4375,13 +4506,13 @@ function Toolbar() {
   return jsxs('div', {
     className: 'wb-tools',
     children: [
-      tool('Note (N, or double-click the board)', jsx(Line, { name: 'note' }), () => newNoteAt(viewCenter())),
-      tool('Group', jsx(Line, { name: 'frame' }), () => {
-        const placed = place({ by: 'you', h: 300, kind: 'frame', title: 'New group', w: 2 * NOTE_W + 3 * GAP })
+      tool(t('tool.note'), jsx(Line, { name: 'note' }), () => newNoteAt(viewCenter())),
+      tool(t('tool.group'), jsx(Line, { name: 'frame' }), () => {
+        const placed = place({ by: 'you', h: 300, kind: 'frame', title: tr('group.newTitle'), w: 2 * NOTE_W + 3 * GAP })
 
         $editing.set(placed.id)
       }),
-      tool('Text', jsx(Line, { name: 'text' }), () => {
+      tool(t('tool.text'), jsx(Line, { name: 'text' }), () => {
         const placed = place({ by: 'you', h: 60, kind: 'text', text: '', w: 320 })
 
         $editing.set(placed.id)
@@ -4426,8 +4557,8 @@ function Toolbar() {
         ]
       }),
       jsx('div', { className: 'wb-sep' }),
-      tool('Draw (P)', jsx(Line, { name: 'pen' }), () => pick('pen'), active === 'pen'),
-      tool('Select an area, then ask Hermes about it (L)', jsx(Line, { name: 'lasso' }), () => pick('lasso'), active === 'lasso'),
+      tool(t('tool.pen'), jsx(Line, { name: 'pen' }), () => pick('pen'), active === 'pen'),
+      tool(t('tool.select'), jsx(Line, { name: 'lasso' }), () => pick('lasso'), active === 'lasso'),
       ...(active === 'pen'
         ? Object.keys(PEN_TONES).map(tone =>
             jsx('button', { 'aria-label': `${tone} pen`, className: `wb-swatch${pen === tone ? ' wb-swatch-on' : ''}`, onClick: () => $pen.set(tone), style: { background: PEN_TONES[tone] }, type: 'button' }, `pen${tone}`)
@@ -4439,7 +4570,7 @@ function Toolbar() {
             jsx(
               'button',
               {
-                'aria-label': TONES[tone].label,
+                'aria-label': t(TONES[tone].labelKey),
                 className: 'wb-swatch',
                 onClick: () => {
                   const current = $board.get()
@@ -4455,36 +4586,34 @@ function Toolbar() {
           )
         : []),
       selection.length > 0 ? jsx('div', { className: 'wb-sep' }) : null,
-      notes.length > 0 ? tool(notes.every(note => note.action) ? 'Not an action item' : 'Make it an action item', jsx(Line, { name: 'bolt' }), () => toggleAction(selection), notes.every(note => note.action)) : null,
-      notes.length > 0 ? tool('Hand to Hermes', jsx(Line, { name: 'hand' }), () => notes.forEach(note => handToHermes(note.id))) : null,
-      selection.length > 0 ? tool('Duplicate (Cmd D)', jsx(icons.Copy, { size: 15 }), duplicateSelection) : null,
-      arrows ? tool('Remove its arrows', jsx(Line, { name: 'unlink' }), () => removeArrows(selection)) : null,
-      selection.length > 0 ? tool('Delete (Backspace)', jsx(icons.Trash2, { size: 15 }), () => removeItems(selection)) : null
+      notes.length > 0 ? tool(notes.every(note => note.action) ? t('tool.notAction') : t('tool.makeAction'), jsx(Line, { name: 'bolt' }), () => toggleAction(selection), notes.every(note => note.action)) : null,
+      notes.length > 0 ? tool(t('tool.hand'), jsx(Line, { name: 'hand' }), () => notes.forEach(note => handToHermes(note.id))) : null,
+      selection.length > 0 ? tool(t('tool.duplicate'), jsx(icons.Copy, { size: 15 }), duplicateSelection) : null,
+      arrows ? tool(t('tool.unlink'), jsx(Line, { name: 'unlink' }), () => removeArrows(selection)) : null,
+      selection.length > 0 ? tool(t('tool.delete'), jsx(icons.Trash2, { size: 15 }), () => removeItems(selection)) : null
     ]
   })
 }
 
 function ZoomBar({ board }) {
+  const t = usePluginI18n('whiteboard')
   const step = factor => setView(zoomAt(board.view, { x: viewport.w / 2, y: viewport.h / 2 }, factor), true)
 
   return jsxs('div', {
     className: 'wb-zoom',
     children: [
-      jsx('button', { className: 'wb-btn wb-icon', onClick: () => step(1 / 1.25), title: 'Zoom out', type: 'button', children: jsx(icons.ZoomOut, { size: 15 }) }),
+      jsx('button', { className: 'wb-btn wb-icon', onClick: () => step(1 / 1.25), title: t('zoom.out'), type: 'button', children: jsx(icons.ZoomOut, { size: 15 }) }),
       jsx('span', { children: `${Math.round(board.view.zoom * 100)}%` }),
-      jsx('button', { className: 'wb-btn wb-icon', onClick: () => step(1.25), title: 'Zoom in', type: 'button', children: jsx(icons.ZoomIn, { size: 15 }) }),
-      jsx('button', { className: 'wb-btn wb-icon', onClick: () => fitView(boundsOf(board.items)), title: 'Fit the board', type: 'button', children: jsx(icons.Maximize, { size: 15 }) })
+      jsx('button', { className: 'wb-btn wb-icon', onClick: () => step(1.25), title: t('zoom.in'), type: 'button', children: jsx(icons.ZoomIn, { size: 15 }) }),
+      jsx('button', { className: 'wb-btn wb-icon', onClick: () => fitView(boundsOf(board.items)), title: t('zoom.fit'), type: 'button', children: jsx(icons.Maximize, { size: 15 }) })
     ]
   })
 }
 
-const STARTERS = [
-  { label: 'Plan a product launch in six weeks', layout: 'route' },
-  { label: 'Retro for our last sprint', layout: 'columns' },
-  { label: 'Ideas for a team offsite', layout: 'map' }
-]
+const STARTERS = ['route', 'columns', 'map']
 
 function Compose() {
+  const t = usePluginI18n('whiteboard')
   const compose = useValue($compose)
   const selection = useValue($selection)
   const board = useValue($board)
@@ -4546,11 +4675,11 @@ function Compose() {
                     send()
                   }
                 },
-                placeholder: asking ? `Ask Hermes about ${scope.length === 1 ? 'this' : `these ${scope.length} items`}` : 'Tell Hermes what you are planning, and it lays it out',
+                placeholder: asking ? (scope.length === 1 ? t('compose.askThis') : t('compose.askThese', scope.length)) : t('compose.placeholder'),
                 rows: 1,
                 value: text
               }),
-              jsx('button', { 'aria-label': asking ? 'Ask' : 'Lay it out', className: 'wb-send', disabled: !clean(text, 10), onClick: () => send(), type: 'button', children: jsx(icons.ArrowUp, { size: 16 }) })
+              jsx('button', { 'aria-label': asking ? t('compose.ask') : t('compose.lay'), className: 'wb-send', disabled: !clean(text, 10), onClick: () => send(), type: 'button', children: jsx(icons.ArrowUp, { size: 16 }) })
             ]
           }),
       compose.busy
@@ -4559,21 +4688,21 @@ function Compose() {
           ? jsxs('div', {
               className: 'wb-layouts',
               children: [
-                jsx('span', { className: 'wb-scope', children: `Asking about ${scope.length} selected` }),
-                ...['What is missing?', 'What comes first?', 'Sum this up'].map(question =>
-                  jsx('button', { onClick: () => send(question, '', false), type: 'button', children: question }, question)
+                jsx('span', { className: 'wb-scope', children: t('compose.askingAbout', scope.length) }),
+                ...[['compose.askMissing', 'What is missing?'], ['compose.askFirst', 'What comes first?'], ['compose.askSum', 'Sum this up']].map(([key, question]) =>
+                  jsx('button', { onClick: () => send(question, '', false), type: 'button', children: t(key) }, key)
                 ),
-                jsx('span', { className: 'wb-hint', children: 'Esc to lay out' })
+                jsx('span', { className: 'wb-hint', children: t('compose.escHint') })
               ]
             })
           : jsxs('div', {
               className: 'wb-layouts',
               children: [
-                jsx('button', { className: layout === '' ? 'wb-on' : undefined, onClick: () => setLayout(''), type: 'button', children: 'Any shape' }),
+                jsx('button', { className: layout === '' ? 'wb-on' : undefined, onClick: () => setLayout(''), type: 'button', children: t('compose.anyShape') }),
                 ...LAYOUTS.map(name =>
-                  jsx('button', { className: layout === name ? 'wb-on' : undefined, onClick: () => setLayout(name), title: LAYOUT_META[name].hint, type: 'button', children: LAYOUT_META[name].label }, name)
+                  jsx('button', { className: layout === name ? 'wb-on' : undefined, onClick: () => setLayout(name), title: t(LAYOUT_META[name].hint), type: 'button', children: t(LAYOUT_META[name].label) }, name)
                 ),
-                jsx('span', { className: 'wb-hint', children: 'Enter to lay it out' })
+                jsx('span', { className: 'wb-hint', children: t('compose.enterHint') })
               ]
             }),
       compose.error ? jsx('div', { className: 'wb-error', children: compose.error }) : null
@@ -4639,6 +4768,7 @@ async function acceptAll(proposal) {
 }
 
 function Panel({ board }) {
+  const t = usePluginI18n('whiteboard')
   const proposals = board.proposals
   const pending = proposals.some(proposal => proposal.items.some(item => item.state === 'pending'))
 
@@ -4662,7 +4792,7 @@ function Panel({ board }) {
                 className: 'wb-proposal',
                 children: jsx('div', {
                   className: 'wb-proposal-sum',
-                  children: 'Nothing waiting. Click Group my notes, or let a chat suggest changes once chats can read your boards. Every suggestion waits here until you accept or skip it.'
+                  children: t('panel.empty')
                 })
               })
             : [...proposals].reverse().map(proposal =>
@@ -4693,29 +4823,31 @@ function Panel({ board }) {
 }
 
 function Empty() {
+  const t = usePluginI18n('whiteboard')
+
   return jsxs('div', {
     className: 'wb-empty',
     children: [
       jsx('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 14 }, children: jsx(Sticker, { name: 'sandal', size: 76, tilt: -8 }) }),
-      jsx('h1', { children: 'Think it through.' }),
-      jsx('p', {
-        children: 'Tell Hermes what you are planning and it lays it out. Throw notes on the board and it finds the groups. Hand it an action item and an agent does the work right here.'
-      }),
+      jsx('h1', { children: t('empty.title') }),
+      jsx('p', { children: t('empty.body') }),
       jsx('div', {
         className: 'wb-starters',
-        children: STARTERS.map(starter =>
-          jsx(
+        children: STARTERS.map(starter => {
+          const text = t(`starter.${starter}`)
+
+          return jsx(
             'button',
             {
-              onClick: () => window.dispatchEvent(new CustomEvent('wb-starter', { detail: { layout: starter.layout, text: starter.label } })),
+              onClick: () => window.dispatchEvent(new CustomEvent('wb-starter', { detail: { layout: starter, text } })),
               type: 'button',
-              children: starter.label
+              children: text
             },
-            starter.label
+            starter
           )
-        )
+        })
       }),
-      jsx('div', { className: 'wb-empty-tip', children: 'Or double-click anywhere to add a note. Press P to draw.' })
+      jsx('div', { className: 'wb-empty-tip', children: t('empty.tip') })
     ]
   })
 }
@@ -4846,9 +4978,14 @@ function WhiteboardPage() {
 
 export default {
   id: 'whiteboard',
-  name: 'Whiteboard',
-  description: 'An agentic whiteboard. Tell Hermes what you are planning and it lays it out, groups your notes, and sends agents to do the action items.',
+  name: tr('appName'),
+  description: tr('appDescription'),
   register(ctx) {
+    if (ctx.i18n) {
+      ctx.i18n.register(MESSAGES)
+      tr = ctx.i18n.t
+    }
+
     storage = ctx.storage
     pluginOs = ctx.os
     ctx.onDispose(installStyles())
@@ -4879,14 +5016,27 @@ export default {
       pluginOs = null
     })
 
-    ctx.registerMany([
-      { area: ROUTES_AREA, data: { path: ROUTE }, id: 'page', render: () => jsx(WhiteboardPage, {}), title: 'Whiteboard' },
-      { area: SIDEBAR_NAV_AREA, data: { codicon: 'lightbulb-sparkle', label: 'Whiteboard', path: ROUTE }, id: 'nav' },
-      {
-        area: PALETTE_AREA,
-        data: { id: 'whiteboard.open', keywords: ['whiteboard', 'board', 'plan', 'brainstorm', 'retro', 'sticky', 'notes'], label: 'Open Whiteboard', run: () => host.navigate(ROUTE) },
-        id: 'open'
+    const registerLabels = () =>
+      ctx.registerMany([
+        { area: ROUTES_AREA, data: { path: ROUTE }, id: 'page', render: () => jsx(WhiteboardPage, {}), title: tr('nav') },
+        { area: SIDEBAR_NAV_AREA, data: { codicon: 'lightbulb-sparkle', label: tr('nav'), path: ROUTE }, id: 'nav' },
+        {
+          area: PALETTE_AREA,
+          data: { id: 'whiteboard.open', keywords: ['whiteboard', 'board', 'plan', 'brainstorm', 'retro', 'sticky', 'notes'], label: tr('openCommand'), run: () => host.navigate(ROUTE) },
+          id: 'open'
+        }
+      ])
+
+    let disposeLabels = registerLabels()
+
+    // The sidebar and the palette read these once, so rebuild them in place when
+    // the app switches language instead of asking the user to restart.
+    ctx.i18n?.onLocaleChange?.(() => {
+      if (typeof disposeLabels === 'function') {
+        disposeLabels()
       }
-    ])
+
+      disposeLabels = registerLabels()
+    })
   }
 }
