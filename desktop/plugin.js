@@ -111,9 +111,9 @@ const MESSAGES = {
     'layout.columns': 'Columns',
     'layout.map': 'Map',
     'layout.route': 'Route',
-    'layout.columns.hint': 'Groups side by side, like a retro or a plan by team',
-    'layout.map.hint': 'Ideas around one centre, like a brainstorm',
-    'layout.route.hint': 'Steps in order along a road, like a launch or a trip',
+    'layoutHint.columns': 'Groups side by side, like a retro or a plan by team',
+    'layoutHint.map': 'Ideas around one centre, like a brainstorm',
+    'layoutHint.route': 'Steps in order along a road, like a launch or a trip',
     'tone.butter': 'Butter',
     'tone.peach': 'Peach',
     'tone.mint': 'Mint',
@@ -167,9 +167,9 @@ const MESSAGES = {
     'layout.columns': '分栏',
     'layout.map': '发散图',
     'layout.route': '路线',
-    'layout.columns.hint': '并排分组，像复盘或按团队分的计划',
-    'layout.map.hint': '围绕一个中心发散，像头脑风暴',
-    'layout.route.hint': '按顺序排成一条路，像上线计划或行程',
+    'layoutHint.columns': '并排分组，像复盘或按团队分的计划',
+    'layoutHint.map': '围绕一个中心发散，像头脑风暴',
+    'layoutHint.route': '按顺序排成一条路，像上线计划或行程',
     'tone.butter': '黄油色',
     'tone.peach': '蜜桃色',
     'tone.mint': '薄荷绿',
@@ -178,6 +178,28 @@ const MESSAGES = {
     'tone.paper': '纸白',
     'group.newTitle': '未命名分组'
   }
+}
+
+/** Hermes looks a key up as a path into a nested tree (`empty.title` is
+ *  `{ empty: { title } }`). The bundles above are written flat so they are easy
+ *  to read and compare, and this turns one into the tree Hermes expects. A key
+ *  may not be both a message and the start of a longer key. */
+function messageTree(flat) {
+  const tree = {}
+
+  for (const [key, value] of Object.entries(flat)) {
+    const parts = key.split('.')
+    let node = tree
+
+    for (const part of parts.slice(0, -1)) {
+      node[part] = node[part] && typeof node[part] === 'object' ? node[part] : {}
+      node = node[part]
+    }
+
+    node[parts.at(-1)] = value
+  }
+
+  return tree
 }
 
 /** Module-level translator: for handlers, toasts and the static labels the app
@@ -1239,9 +1261,9 @@ function toggleAction(ids) {
 
 const LAYOUTS = ['route', 'columns', 'map']
 const LAYOUT_META = {
-  columns: { hint: 'layout.columns.hint', label: 'layout.columns' },
-  map: { hint: 'layout.map.hint', label: 'layout.map' },
-  route: { hint: 'layout.route.hint', label: 'layout.route' }
+  columns: { hint: 'layoutHint.columns', label: 'layout.columns' },
+  map: { hint: 'layoutHint.map', label: 'layout.map' },
+  route: { hint: 'layoutHint.route', label: 'layout.route' }
 }
 const WAYPOINT_W = 244
 const WAYPOINT_H = 138
@@ -4660,6 +4682,7 @@ function ModelPicker({ hint, label, role }) {
 }
 
 function TopBar({ board }) {
+  const t = usePluginI18n('whiteboard')
   const index = useValue($index)
   const sharing = useValue($chatSharing)
   const modelOptions = useValue($modelOptions)
@@ -5085,7 +5108,7 @@ function Compose() {
               children: [
                 jsx('span', { className: 'wb-scope', children: t('compose.askingAbout', scope.length) }),
                 ...[['compose.askMissing', 'What is missing?'], ['compose.askFirst', 'What comes first?'], ['compose.askSum', 'Sum this up']].map(([key, question]) =>
-                  jsx('button', { onClick: () => send(question, '', false), type: 'button', children: t(key) }, key)
+                  jsx('button', { onClick: () => send(t(key) || question, '', false), type: 'button', children: t(key) }, key)
                 ),
                 jsx('span', { className: 'wb-hint', children: t('compose.escHint') })
               ]
@@ -5377,7 +5400,7 @@ export default {
   description: tr('appDescription'),
   register(ctx) {
     if (ctx.i18n) {
-      ctx.i18n.register(MESSAGES)
+      ctx.i18n.register(Object.fromEntries(Object.entries(MESSAGES).map(([locale, flat]) => [locale, messageTree(flat)])))
       tr = ctx.i18n.t
     }
 

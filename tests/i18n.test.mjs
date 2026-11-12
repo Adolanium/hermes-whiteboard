@@ -49,9 +49,25 @@ function load(locale) {
 
         return () => undefined
       },
-      t: (key, ...args) => typeof context.__i18n.MESSAGES[locale][key] === 'function'
-        ? context.__i18n.MESSAGES[locale][key](...args)
-        : (context.__i18n.MESSAGES[locale][key] ?? context.__i18n.MESSAGES.en[key] ?? key)
+      // The same lookup Hermes does (apps/desktop/src/i18n/runtime.ts): walk the key as a
+      // dot-path into the registered tree, active locale first, then English, then the key.
+      t: (key, ...args) => {
+        const walk = tree => key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), tree)
+
+        for (const tree of [bundles?.[locale], bundles?.en]) {
+          const value = walk(tree)
+
+          if (typeof value === 'string') {
+            return value
+          }
+
+          if (typeof value === 'function') {
+            return value(...args)
+          }
+        }
+
+        return key
+      }
     },
     onDispose: () => undefined,
     registerMany: list => {
@@ -102,4 +118,42 @@ test('a formatted message keeps its arguments in the same order', () => {
 
   assert.equal(translate('compose.askThese', 3), 'Ask Hermes about these 3 items')
   assert.equal(translate('compose.askThis'), 'Ask Hermes about this')
+})
+
+test('every component that looks up copy asks for the translator first', () => {
+  const source = fs.readFileSync(new URL('../desktop/plugin.js', import.meta.url), 'utf8')
+  const lines = source.split('\n')
+  const starts = lines.flatMap((line, index) => (/^(async )?function \w+/.test(line) ? [index] : []))
+  const missing = []
+
+  starts.forEach((start, at) => {
+    const body = lines.slice(start, starts[at + 1] ?? lines.length).join('\n')
+    const uses = /(?<![\w.$])t\((['`]|LAYOUT_META|TONES)/.test(body)
+
+    if (uses && !body.includes("const t = usePluginI18n('whiteboard')")) {
+      missing.push(lines[start].slice(0, 50))
+    }
+  })
+
+  // A component that calls t() without it throws "t is not defined" when the page renders.
+  assert.deepEqual(missing, [])
+})
+
+test('every key resolves through the nested lookup Hermes uses, in both languages', () => {
+  for (const locale of ['en', 'zh']) {
+    const { translate } = load(locale)
+    const source = fs.readFileSync(new URL('../desktop/plugin.js', import.meta.url), 'utf8')
+    const flat = source.slice(source.indexOf('const MESSAGES = {'), source.indexOf('function messageTree'))
+    const keys = [...new Set([...flat.matchAll(/^\s+'?([A-Za-z][\w.]*)'?: /gm)].map(match => match[1]))].filter(key => !['en', 'zh'].includes(key))
+
+    assert.equal(keys.length > 50, true)
+
+    for (const key of keys) {
+      // A key that came back as itself was not found in the tree.
+      assert.notEqual(translate(key, 3), key, `${locale}: ${key}`)
+    }
+  }
+
+  assert.equal(load('zh').translate('layoutHint.route'), '按顺序排成一条路，像上线计划或行程')
+  assert.equal(load('zh').translate('compose.askThese', 4), '就这 4 条问 Hermes')
 })
