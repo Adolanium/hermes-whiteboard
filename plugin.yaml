@@ -1,5 +1,5 @@
 name: whiteboard
-version: "0.1.0"
+version: "0.1.1"
 description: "An agentic whiteboard. Say what you're planning and Hermes lays it out as a route, columns or a map, with hand-drawn stickers. Throw in rough notes and Hermes proposes groups, owners and action items you accept one by one. Hand an action item to Hermes and an agent does it on the board, with its own cursor, and delivers the result next to the note. Once you allow it, any chat can read your boards and propose changes."
 author: Adolanium
 license: MIT

@@ -20,7 +20,7 @@ function load(options = {}) {
         pathFractions, planStops, removeArrows, resizeItem, suggestedNotes, toDelimited, toggleAction, withChildren,
         emptyBoard, exportBoard, fitFrames, frameSlots, hydrate, inside, lastJsonObject, layoutSpec, makeNote, moveItems,
         overlaps, parseBoardSpec, parseRunReply, rectOf, redo, removeItems, sectionsOf, setBoard, sharedBoardCopy, takeBack,
-        takeBackReceipt, takeBackState, tidyProposal, undo, chatProposal
+        takeBackReceipt, takeBackState, tidyProposal, undo, chatProposal, suiteListen, takeSuiteNotes
       }
     `)
   const atom = initial => {
@@ -603,4 +603,56 @@ test('route results stack away from the road and never cover the title', () => {
 
   assert.ok(title.y + title.h < card.y)
   assert.equal(wb.liftTitle(items), items)
+})
+
+test('notes from Data or Sheets land as one new group beside the board, and one undo removes them', () => {
+  const wb = load({ storage: memoryStorage() })
+
+  wb.hydrate(memoryStorage())
+  wb.setBoard({ ...wb.$board.get(), items: [wb.makeNote({ id: 'mine', text: 'My own note', x: 0, y: 0 })] })
+
+  const heard = {}
+
+  wb.suiteListen((type, listener) => {
+    heard[type] = listener
+  })
+
+  const hello = { detail: { peers: [] } }
+
+  heard['hermes-suite:hello'](hello)
+  assert.deepEqual(Array.from(hello.detail.peers), ['whiteboard'])
+
+  const elsewhere = { detail: { notes: ['x'], taken: false, to: 'data' } }
+  const empty = { detail: { notes: ['', '   ', null], taken: false, to: 'whiteboard' } }
+  const sent = { detail: { from: 'data', notes: ['Saturday takes 35% of revenue', 'Latte alone is 48% of cups', '', 'x'.repeat(400)], taken: false, title: 'Weekends carry the cart', to: 'whiteboard' } }
+
+  heard['hermes-suite:notes'](elsewhere)
+  heard['hermes-suite:notes'](empty)
+  assert.equal(elsewhere.detail.taken, false)
+  assert.equal(empty.detail.taken, false)
+  assert.equal(wb.$board.get().items.length, 1)
+
+  heard['hermes-suite:notes'](sent)
+  assert.equal(sent.detail.taken, true)
+
+  const items = wb.$board.get().items
+  const frame = items.find(item => item.kind === 'frame')
+  const notes = items.filter(item => item.frame === frame.id)
+
+  assert.equal(frame.title, 'Weekends carry the cart')
+  assert.deepEqual(Array.from(notes, note => note.text.length), [29, 26, 280])
+  assert.equal(notes.every(note => note.by === 'you' && wb.inside(wb.rectOf(note), wb.rectOf(frame))), true)
+  // Beside what was there, never on top of it.
+  assert.equal(wb.overlaps(wb.rectOf(frame), wb.rectOf(items[0]), 0), false)
+  assert.equal(items[0].text, 'My own note')
+  assert.deepEqual(Array.from(wb.$selection.get()), [frame.id])
+
+  // The same event delivered twice is taken once.
+  heard['hermes-suite:notes'](sent)
+  assert.equal(wb.$board.get().items.length, 5)
+  wb.undo()
+  assert.equal(wb.$board.get().items.length, 1)
+
+  assert.equal(wb.takeSuiteNotes({ from: 'sheets', notes: Array.from({ length: 40 }, (_, index) => `row ${index}`) }) !== '', true)
+  assert.equal(wb.$board.get().items.filter(item => item.kind === 'note').length, 25)
 })

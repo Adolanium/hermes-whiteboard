@@ -2945,6 +2945,76 @@ function takeChatEntry(entry) {
   return 'taken'
 }
 
+// ---------------------------------------------------------------------------
+// Working with the Sheets and Data pages. Desktop plugins load into one window,
+// so they can hand things to each other with a plain window event: nothing is
+// written to disk, nothing goes through a backend, and no model is involved.
+// A handoff only ever starts from a click on the other page. What arrives is
+// added to the open board as one new group of notes, beside what is there, and
+// one undo takes it away again.
+//
+//   hermes-suite:hello   detail { peers: [] }      each listener adds its id
+//   hermes-suite:notes   detail { to, from, title, notes: [text] }
+//                        the receiver sets detail.taken = true and shows them
+// ---------------------------------------------------------------------------
+
+const SUITE_HELLO = 'hermes-suite:hello'
+const SUITE_NOTES = 'hermes-suite:notes'
+const SUITE_FROM = { data: 'Data', sheets: 'Sheets' }
+const SUITE_MAX_NOTES = 24
+
+/** Notes another suite page sent, as one group on the open board. Returns the
+ *  group's id, or '' when there was nothing in it. */
+function takeSuiteNotes(detail) {
+  const texts = (Array.isArray(detail?.notes) ? detail.notes : []).map(text => clean(text, 280)).filter(Boolean).slice(0, SUITE_MAX_NOTES)
+  const board = $board.get()
+
+  if (texts.length === 0 || board.items.length + texts.length + 1 > MAX_ITEMS) {
+    return ''
+  }
+
+  const title = clean(detail.title, 60) || `From ${SUITE_FROM[detail.from] || 'another page'}`
+  const cols = texts.length > 8 ? 3 : texts.length > 3 ? 2 : 1
+  const size = frameSize(texts.length, cols, title)
+  const bounds = boundsOf(board.items)
+  const spot = bounds ? { x: bounds.x + bounds.w + 160, y: bounds.y } : { x: 0, y: 0 }
+  const frame = { ...size, id: uid('f'), kind: 'frame', rev: rev(), sticker: detail.from === 'data' ? 'chart' : undefined, title, x: spot.x, y: spot.y }
+  const notes = frameSlots(frame, texts.length, cols).map((slot, index) => makeNote({ ...slot, frame: frame.id, text: texts[index], tone: detail.from === 'data' ? 'butter' : 'mint' }))
+
+  addItems([{ ...frame, sticker: STICKERS[frame.sticker] ? frame.sticker : undefined }, ...notes.map(note => ({ ...note, tone: TONES[note.tone] ? note.tone : 'butter' }))])
+
+  return frame.id
+}
+
+/** Answer the other pages. Called once from register(). */
+function suiteListen(listen) {
+  listen(SUITE_HELLO, event => {
+    if (Array.isArray(event?.detail?.peers)) {
+      event.detail.peers.push('whiteboard')
+    }
+  })
+  listen(SUITE_NOTES, event => {
+    const detail = event?.detail
+
+    if (!detail || detail.to !== 'whiteboard' || detail.taken) {
+      return
+    }
+
+    const id = takeSuiteNotes(detail)
+
+    if (id) {
+      detail.taken = true
+      host.navigate(ROUTE)
+
+      const board = $board.get()
+
+      $selection.set([id])
+      fitView(boundsOf(board.items.filter(item => item.id === id || item.frame === id)), true, 1)
+      $toast.set({ kind: 'info', text: `${SUITE_FROM[detail.from] || 'Another page'} pinned ${board.items.filter(item => item.frame === id).length} notes. Undo takes them off.` })
+    }
+  })
+}
+
 function watchChats() {
   let stopped = false
   let shared = false
@@ -4853,6 +4923,18 @@ export default {
     pluginOs = ctx.os
     ctx.onDispose(installStyles())
     hydrate(ctx.storage)
+
+    // The other suite pages reach this one through window events (see suiteListen).
+    if (typeof window !== 'undefined') {
+      suiteListen((type, listener) => {
+        if (typeof ctx.addEventListener === 'function') {
+          ctx.addEventListener(window, type, listener)
+        } else {
+          window.addEventListener(type, listener)
+          ctx.onDispose(() => window.removeEventListener(type, listener))
+        }
+      })
+    }
 
     if (typeof ctx.rest === 'function') {
       pluginRest = (path, options) => ctx.rest(path, options)

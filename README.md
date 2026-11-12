@@ -22,6 +22,8 @@ An agentic whiteboard for Hermes Desktop. You think a plan through on a board. H
 
 **A real whiteboard underneath.** Notes in six colours, groups, text, 32 stickers, arrows you draw between items, a pen, resize, duplicate, copy and paste, undo and redo, pan and zoom. Text grows as you zoom out, so a board fitted to the window still reads.
 
+**With Sheets and Data.** When the [Sheets](https://github.com/Adolanium/hermes-sheets) or [Data](https://github.com/Adolanium/hermes-data) plugin is on, their **Pin to board** button puts ticked rows, or what each chart of a report says, on your open board as one new group of notes. One undo takes the group off again.
+
 **From any chat.** Once you allow it, any Hermes chat can read your boards, start a new one, and propose notes, groups and action items that wait on the board for you.
 
 **Take it with you.** Export a board as Markdown, as CSV, or copy it as a table to paste into Hermes Sheets or any spreadsheet.
@@ -71,6 +73,7 @@ Your Hermes Desktop  →  local board storage  →  your Hermes model (only when
 - Boards live in Hermes plugin storage on this desktop.
 - **Chats can read my boards** is off until you turn it on in Settings. While it is on, Whiteboard keeps a copy of each board under `plugin-data/whiteboard/` in your Hermes home so the chat tools can read it. Turning it off deletes the copies.
 - **Export** writes the one Markdown or CSV file you name in the system save dialog. The page opens the dialog with the Desktop SDK and hands the path to Whiteboard's own backend, which refuses other file types and anything inside your Hermes home.
+- **Sheets and Data pin notes here inside the app window**, with a browser event between the pages, and only when you click. Nothing is written to disk for it, no backend is called and no model is involved. The notes are added beside what is on the board and never change it. Any other Desktop plugin you have switched on runs in the same window and could send or read such an event.
 - No telemetry, no credentials, no shell commands or background processes of its own. The page makes no network requests of its own.
 
 ## Limits
