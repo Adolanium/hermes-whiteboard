@@ -21,7 +21,8 @@ function load(options = {}) {
         emptyBoard, exportBoard, fitFrames, frameSlots, hydrate, inside, lastJsonObject, layoutSpec, makeNote, moveItems,
         overlaps, parseBoardSpec, parseRunReply, rectOf, redo, removeItems, sectionsOf, setBoard, sharedBoardCopy, takeBack,
         takeBackReceipt, takeBackState, tidyProposal, undo, chatProposal, suiteListen, takeSuiteNotes,
-        $models, $modelOptions, cleanModelChoice, loadModelOptions, runSession, setModelChoice
+        $models, $modelOptions, cleanModelChoice, loadModelOptions, runSession, setModelChoice,
+        $chatBridge, backendKey, setChatSharing, syncChats
       }
     `)
   const atom = initial => {
@@ -832,4 +833,139 @@ test('the model pickers list only providers Hermes says are signed in', async ()
 
   await broken.loadModelOptions()
   assert.match(broken.$modelOptions.get().error, /could not list your models: gateway restarting/)
+})
+
+/** A stand-in for Hermes with profiles: each profile has its own plugin backend,
+ *  and the page's routes go to whichever profile is selected. */
+function profiles(installed) {
+  let current = installed[0]
+  const backends = Object.fromEntries(installed.map(name => [name, { boards: new Map(), calls: [], inbox: [], sharing: false }]))
+  const rest = async (path, options = {}) => {
+    const backend = backends[current]
+
+    if (!backend) {
+      throw new Error('404')
+    }
+
+    backend.calls.push(`${options.method || 'GET'} ${path}`)
+
+    if (path === '/inbox') {
+      return { entries: [...backend.inbox] }
+    }
+
+    if (path === '/sharing') {
+      backend.sharing = options.body.on
+
+      if (!options.body.on) {
+        backend.boards.clear()
+      }
+    } else if (path.startsWith('/boards/') && options.method === 'PUT') {
+      backend.boards.set(path.split('/')[2], options.body)
+    } else if (path.endsWith('/ack')) {
+      backend.inbox = backend.inbox.filter(entry => entry.id !== path.split('/')[2])
+    }
+
+    return {}
+  }
+
+  return { backends, host: { state: { connectionId: { get: () => 'local' }, profile: { get: () => current } } }, rest, use: name => (current = name) }
+}
+
+test('after a profile switch, the new profile gets the sharing switch and the board copies', async () => {
+  const hermes = profiles(['default', 'work'])
+  const storage = memoryStorage()
+  const wb = load({ host: hermes.host, rest: hermes.rest, storage })
+
+  wb.hydrate(storage)
+  wb.setBoard({ ...wb.$board.get(), items: [wb.makeNote({ text: 'Book the venue', x: 0, y: 0 })] })
+  wb.setChatSharing(true)
+
+  const seen = { backend: null, shared: false }
+
+  await wb.syncChats(seen)
+  assert.equal(hermes.backends.default.sharing, true)
+  assert.equal(hermes.backends.default.boards.size, 1)
+  assert.equal(hermes.backends.work.sharing, false)
+
+  // A second round on the same profile sends nothing again.
+  const before = hermes.backends.default.calls.length
+
+  await wb.syncChats(seen)
+  assert.deepEqual(hermes.backends.default.calls.slice(before), ['GET /inbox'])
+
+  hermes.use('work')
+  await wb.syncChats(seen)
+  assert.equal(hermes.backends.work.sharing, true)
+  assert.equal(hermes.backends.work.boards.size, 1)
+  assert.equal(wb.$chatBridge.get(), 'ok')
+  assert.equal(wb.backendKey(), 'local|work')
+
+  // Sharing switched off in one profile reaches the other when Hermes is back on it.
+  wb.setChatSharing(false)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(hermes.backends.work.boards.size, 0)
+  assert.equal(hermes.backends.default.boards.size, 1)
+  hermes.use('default')
+  await wb.syncChats(seen)
+  assert.equal(hermes.backends.default.sharing, false)
+  assert.equal(hermes.backends.default.boards.size, 0)
+})
+
+test('a profile without the plugin says so, and the sync comes back when Hermes returns', async () => {
+  const hermes = profiles(['default'])
+  const storage = memoryStorage()
+  const wb = load({ host: hermes.host, rest: hermes.rest, storage })
+
+  wb.hydrate(storage)
+  wb.setChatSharing(true)
+
+  const seen = { backend: null, shared: false }
+
+  await wb.syncChats(seen)
+  assert.equal(wb.$chatBridge.get(), 'ok')
+
+  hermes.use('work')
+  await wb.syncChats(seen)
+  assert.equal(wb.$chatBridge.get(), 'missing')
+  assert.equal(seen.shared, false)
+
+  hermes.use('default')
+  hermes.backends.default.sharing = false
+  await wb.syncChats(seen)
+  assert.equal(wb.$chatBridge.get(), 'ok')
+  assert.equal(hermes.backends.default.sharing, true)
+})
+
+test('a reply that arrives after a profile switch is not taken as the new profile\'s', async () => {
+  const hermes = profiles(['default', 'work'])
+  const storage = memoryStorage()
+  let switchDuringInbox = true
+  const rest = async (path, options) => {
+    const answer = await hermes.rest(path, options)
+
+    if (path === '/inbox' && switchDuringInbox) {
+      switchDuringInbox = false
+      hermes.use('work')
+    }
+
+    return answer
+  }
+  const wb = load({ host: hermes.host, rest, storage })
+
+  wb.hydrate(storage)
+  hermes.backends.default.inbox.push({ id: 'w0123456789ab', kind: 'board', layout: SPEC.layout, name: SPEC.title, sections: SPEC.sections })
+
+  const seen = { backend: null, shared: false }
+  const boards = wb.$index.get().boards.length
+
+  await wb.syncChats(seen)
+  assert.equal(wb.$index.get().boards.length, boards)
+  assert.equal(hermes.backends.work.calls.length, 0)
+  assert.equal(hermes.backends.default.inbox.length, 1)
+
+  // Back on the first profile, the entry is taken once and acknowledged there.
+  hermes.use('default')
+  await wb.syncChats(seen)
+  assert.equal(wb.$index.get().boards.length, boards + 1)
+  assert.equal(hermes.backends.default.inbox.length, 0)
 })

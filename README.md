@@ -38,6 +38,18 @@ hermes plugins install Adolanium/hermes-whiteboard
 
 A desktop plugin installed from the command line starts switched off. Open **Capabilities › Plugins**, find **Whiteboard**, and switch it on. Then choose **Whiteboard** in the sidebar.
 
+### More than one Hermes profile
+
+The Whiteboard page is part of the Desktop app, so it shows in every profile and your boards are the same in all of them. Hand to Hermes, Run the route and Ask run in the profile you have selected, with that profile's models.
+
+The chat tools (`whiteboard_list`, `whiteboard_read`, `whiteboard_propose`, `whiteboard_create`) are the agent half, and Hermes installs and switches on agent plugins for each profile separately. To let chats in another profile reach your boards, install Whiteboard for that profile as well:
+
+```sh
+hermes -p <profile> plugins install Adolanium/hermes-whiteboard
+```
+
+Then switch it on in **Capabilities › Plugins** while that profile is selected. In a profile without it, the board works as usual and Settings says the chat tools are not running there.
+
 ## Keys
 
 | Key | Does |
@@ -75,7 +87,7 @@ Your Hermes Desktop  →  local board storage  →  your Hermes model (only when
 ```
 
 - Boards live in Hermes plugin storage on this desktop.
-- **Chats can read my boards** is off until you turn it on in Settings. While it is on, Whiteboard keeps a copy of each board under `plugin-data/whiteboard/` in your Hermes home so the chat tools can read it. Turning it off deletes the copies.
+- **Chats can read my boards** is off until you turn it on in Settings. While it is on, Whiteboard keeps a copy of each board under `plugin-data/whiteboard/` in your Hermes home so the chat tools can read it. The copies live in the plugin data of the profile you are in, and each profile where Whiteboard is installed gets its own when you open Hermes on it. Turning it off deletes the copies in the profile you are in straight away, and in each other profile the next time you open Hermes on it.
 - **Export** writes the one Markdown or CSV file you name in the system save dialog. The page opens the dialog with the Desktop SDK and hands the path to Whiteboard's own backend, which refuses other file types and anything inside your Hermes home.
 - **Sheets and Data pin notes here inside the app window**, with a browser event between the pages, and only when you click. Nothing is written to disk for it, no backend is called and no model is involved. The notes are added beside what is on the board and never change it. Any other Desktop plugin you have switched on runs in the same window and could send or read such an event.
 - No telemetry, no credentials, no shell commands or background processes of its own. The page makes no network requests of its own.

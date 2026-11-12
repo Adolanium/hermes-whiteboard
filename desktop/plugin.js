@@ -3114,9 +3114,68 @@ function suiteListen(listen) {
   })
 }
 
+/** Which Hermes backend this page's own routes reach right now. They follow the
+ *  profile selected in Hermes, and every profile keeps its own plugin data: its
+ *  own inbox, its own copies of the boards, its own sharing switch. */
+function backendKey() {
+  const read = cell => {
+    try {
+      return String(cell?.get?.() ?? '')
+    } catch {
+      return ''
+    }
+  }
+
+  return `${read(host.state?.connectionId)}|${read(host.state?.profile)}`
+}
+
+/** One round with the chat tools: take what chats sent, and make sure this
+ *  profile's backend has the sharing switch and the board copies. `seen`
+ *  remembers which backend was synced, so a profile switch syncs the new one. */
+async function syncChats(seen) {
+  const backend = backendKey()
+
+  if (backend !== seen.backend) {
+    seen.backend = backend
+    seen.shared = false
+    $chatBridge.set('unknown')
+  }
+
+  try {
+    const answer = await pluginRest('/inbox')
+
+    // The profile changed while Hermes was answering: this reply is the old one's.
+    if (backendKey() !== backend) {
+      return
+    }
+
+    $chatBridge.set('ok')
+
+    for (const entry of Array.isArray(answer?.entries) ? answer.entries : []) {
+      if (backendKey() !== backend) {
+        return
+      }
+
+      takeChatEntry(entry)
+      await pluginRest(`/inbox/${encodeURIComponent(entry.id)}/ack`, { method: 'POST' })
+    }
+
+    if (!seen.shared) {
+      await shareAll()
+      seen.shared = backendKey() === backend
+    }
+  } catch {
+    if (backendKey() === backend) {
+      $chatBridge.set('missing')
+    }
+
+    seen.shared = false
+  }
+}
+
 function watchChats() {
+  const seen = { backend: null, shared: false }
   let stopped = false
-  let shared = false
   let timer = null
 
   const tick = async () => {
@@ -3124,24 +3183,7 @@ function watchChats() {
       return
     }
 
-    try {
-      const answer = await pluginRest('/inbox')
-
-      $chatBridge.set('ok')
-
-      for (const entry of Array.isArray(answer?.entries) ? answer.entries : []) {
-        takeChatEntry(entry)
-        await pluginRest(`/inbox/${encodeURIComponent(entry.id)}/ack`, { method: 'POST' })
-      }
-
-      if (!shared) {
-        shared = true
-        await shareAll()
-      }
-    } catch {
-      $chatBridge.set('missing')
-      shared = false
-    }
+    await syncChats(seen)
 
     if (!stopped) {
       timer = setTimeout(() => void tick(), CHAT_POLL_MS)
@@ -4561,10 +4603,10 @@ function TopBar({ board }) {
                       'Chats can read my boards',
                       jsx('small', {
                         children:
-                          'Off until you turn it on. When on, any Hermes chat can read your boards and suggest changes, which wait here for you. A copy of each board is kept in Hermes plugin data on this computer. Turning it off deletes the copies.'
+                          'Off until you turn it on. When on, any Hermes chat can read your boards and suggest changes, which wait here for you. A copy of each board is kept in the plugin data of the Hermes profile you are in. Turning it off deletes the copies, in each other profile the next time you open Hermes on it.'
                       }),
                       bridge === 'missing'
-                        ? jsx('small', { style: { color: 'var(--ui-red, hsl(0 65% 50%))' }, children: "Whiteboard's chat tools aren't running. Switch the Whiteboard plugin on in Capabilities > Plugins." })
+                        ? jsx('small', { style: { color: 'var(--ui-red, hsl(0 65% 50%))' }, children: "Whiteboard's chat tools aren't running in this Hermes profile. Hermes installs and switches on plugins for each profile separately, so install Whiteboard for this profile too and switch it on in Capabilities > Plugins. The board itself works without them." })
                         : null
                     ]
                   })
