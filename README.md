@@ -56,13 +56,15 @@ A desktop plugin installed from the command line starts switched off. Open **Cap
 
 Nothing runs until you click.
 
-- **Laying out a board, grouping notes, unpacking a result and the final brief** each start one hidden Hermes session on your own model. They are told to use no tools.
+- **Laying out a board, grouping notes, unpacking a result and the final brief** each start one hidden Hermes session. They are told to use no tools.
 - **Hand to Hermes, Run the route and Ask** start hidden Hermes sessions that may use your Hermes tools, mainly web search and page reading. Each agent is told not to send messages, write files, run commands or schedule anything. If one uses such a tool anyway, its result card says which.
 - **Approval prompts inside these sessions are denied automatically,** because nobody could see them.
 - **Budgets.** An agent stops after 4 minutes or 24 tool calls. At most three run at once. Every run has a Stop button.
 - Hermes gives plugins no way to delete sessions, so these stay hidden in your session store.
+- **Which model does the work.** Settings has a **Planning model** (laying out, grouping, unpacking, the brief) and an **Agent model** (Hand to Hermes, Run the route, Ask). Both start on "Hermes default", which sends nothing extra, so your Hermes default model does everything. Pick another and Whiteboard names that model when it creates the session. The list holds the models Hermes says you are signed in to. Sign-in and keys stay in Hermes and never reach the plugin.
+- **No silent fallback.** If Hermes cannot use a model you picked, that run stops and says so. It is not retried on your default. A result done by a picked model says which one at the bottom of its card.
 
-Model calls apply your provider's normal usage costs.
+Model calls apply normal usage costs, and each model is billed by its own provider.
 
 ## Privacy
 

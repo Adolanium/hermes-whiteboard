@@ -20,7 +20,8 @@ function load(options = {}) {
         pathFractions, planStops, removeArrows, resizeItem, suggestedNotes, toDelimited, toggleAction, withChildren,
         emptyBoard, exportBoard, fitFrames, frameSlots, hydrate, inside, lastJsonObject, layoutSpec, makeNote, moveItems,
         overlaps, parseBoardSpec, parseRunReply, rectOf, redo, removeItems, sectionsOf, setBoard, sharedBoardCopy, takeBack,
-        takeBackReceipt, takeBackState, tidyProposal, undo, chatProposal, suiteListen, takeSuiteNotes
+        takeBackReceipt, takeBackState, tidyProposal, undo, chatProposal, suiteListen, takeSuiteNotes,
+        $models, $modelOptions, cleanModelChoice, loadModelOptions, runSession, setModelChoice
       }
     `)
   const atom = initial => {
@@ -32,7 +33,7 @@ function load(options = {}) {
     atom,
     clearTimeout: () => undefined,
     console,
-    host: { navigate: () => undefined, notify: () => undefined, onEvent: () => () => undefined, request: async () => ({}) },
+    host: { navigate: () => undefined, notify: () => undefined, onEvent: () => () => undefined, request: async () => ({}), ...(options.host || {}) },
     icons: {},
     jsx: () => null,
     jsxs: () => null,
@@ -655,4 +656,180 @@ test('notes from Data or Sheets land as one new group beside the board, and one 
 
   assert.equal(wb.takeSuiteNotes({ from: 'sheets', notes: Array.from({ length: 40 }, (_, index) => `row ${index}`) }) !== '', true)
   assert.equal(wb.$board.get().items.filter(item => item.kind === 'note').length, 25)
+})
+
+/** A stand-in gateway: records every request, answers session calls, and lets a
+ *  test finish the turn the way Hermes would. */
+function gateway(options = {}) {
+  const calls = []
+  const listeners = {}
+  let sessions = 0
+  const host = {
+    onEvent: (name, listener) => {
+      listeners[name] = [...(listeners[name] || []), listener]
+
+      return () => {
+        listeners[name] = listeners[name].filter(entry => entry !== listener)
+      }
+    },
+    request: async (method, params = {}) => {
+      calls.push([method, JSON.parse(JSON.stringify(params))])
+
+      if (method === 'session.create') {
+        const refusal = options.refuse?.(params)
+
+        if (refusal) {
+          throw Object.assign(new Error(refusal.message), { code: refusal.code })
+        }
+
+        sessions += 1
+
+        return { session_id: `s${sessions}`, stored_session_id: `stored${sessions}` }
+      }
+
+      if (method === 'prompt.submit') {
+        for (const listener of listeners['message.complete'] || []) {
+          listener({ payload: { text: options.reply ?? '{"headline": "Done", "result": "All done."}' }, session_id: params.session_id })
+        }
+      }
+
+      if (method === 'model.options') {
+        if (options.models instanceof Error) {
+          throw options.models
+        }
+
+        return options.models ?? { providers: [] }
+      }
+
+      return {}
+    }
+  }
+
+  return { calls, creates: () => calls.filter(([method]) => method === 'session.create').map(([, params]) => params), host }
+}
+
+test('with Hermes default chosen, a session is created with no model at all', async () => {
+  const hermes = gateway()
+  const wb = load({ host: hermes.host, storage: memoryStorage() })
+
+  wb.hydrate(memoryStorage())
+  assert.deepEqual(JSON.parse(JSON.stringify(wb.$models.get())), { agent: null, planning: null })
+
+  const planning = await wb.runSession({ maxMs: 1000, maxSteps: 4, role: 'planning', text: 'lay it out', title: 'Whiteboard: test' })
+  const agent = await wb.runSession({ maxMs: 1000, maxSteps: 4, text: 'do it', title: 'Whiteboard: test' })
+
+  assert.deepEqual(hermes.creates(), [{ hidden: true, title: 'Whiteboard: test' }, { hidden: true, title: 'Whiteboard: test' }])
+  assert.equal(planning.model, '')
+  assert.equal(agent.model, '')
+  assert.equal(agent.reply.includes('All done.'), true)
+})
+
+test('a chosen model reaches session.create on the hidden path and on the fallback path', async () => {
+  const modern = gateway()
+  const wb = load({ host: modern.host, storage: memoryStorage() })
+
+  wb.hydrate(memoryStorage())
+  wb.setModelChoice('agent', { model: 'gpt-5.5', provider: 'openai', secret: 'never stored' })
+  assert.deepEqual(JSON.parse(JSON.stringify(wb.$models.get().agent)), { model: 'gpt-5.5', provider: 'openai' })
+
+  const run = await wb.runSession({ maxMs: 1000, maxSteps: 4, role: 'agent', text: 'do it', title: 'T' })
+
+  assert.deepEqual(modern.creates(), [{ hidden: true, model: 'gpt-5.5', provider: 'openai', title: 'T' }])
+  assert.equal(run.model, 'gpt-5.5')
+
+  // An older backend refuses `hidden`: the second create still carries the model, then hides the session.
+  const older = gateway({ refuse: params => (params.hidden ? { code: 4000, message: 'unknown parameter: hidden' } : null) })
+  const old = load({ host: older.host, storage: memoryStorage() })
+
+  old.hydrate(memoryStorage())
+  old.setModelChoice('agent', { model: 'hermes-4-pro', provider: '' })
+  await old.runSession({ maxMs: 1000, maxSteps: 4, role: 'agent', text: 'do it', title: 'T' })
+  assert.deepEqual(older.creates(), [{ hidden: true, model: 'hermes-4-pro', title: 'T' }, { model: 'hermes-4-pro', title: 'T' }])
+  assert.deepEqual(older.calls.find(([method]) => method === 'session.set_hidden')[1], { hidden: true, session_id: 's1' })
+})
+
+test('planning runs and agent runs each get their own model, and the choice is stored', async () => {
+  const hermes = gateway()
+  const storage = memoryStorage()
+  const wb = load({ host: hermes.host, storage })
+
+  wb.hydrate(storage)
+  wb.setModelChoice('planning', { model: 'hermes-4-pro', provider: 'anthropic' })
+  wb.setModelChoice('agent', { model: 'gpt-5.5', provider: 'openai' })
+  wb.setModelChoice('nonsense', { model: 'x' })
+  await wb.runSession({ maxMs: 1000, maxSteps: 4, role: 'planning', text: 'group', title: 'P' })
+  await wb.runSession({ maxMs: 1000, maxSteps: 4, role: 'agent', text: 'do', title: 'A' })
+  assert.deepEqual(hermes.creates().map(params => [params.title, params.model, params.provider]), [['P', 'hermes-4-pro', 'anthropic'], ['A', 'gpt-5.5', 'openai']])
+  assert.deepEqual(JSON.parse(JSON.stringify(storage.get('models'))), { agent: { model: 'gpt-5.5', provider: 'openai' }, planning: { model: 'hermes-4-pro', provider: 'anthropic' } })
+
+  // The choice comes back after a restart, and "Hermes default" clears it.
+  const again = load({ host: gateway().host, storage })
+
+  again.hydrate(storage)
+  assert.equal(again.$models.get().agent.model, 'gpt-5.5')
+  again.setModelChoice('agent', null)
+  assert.equal(again.$models.get().agent, null)
+  assert.equal(storage.get('models').agent, null)
+  assert.equal(again.cleanModelChoice({ model: '   ' }), null)
+  assert.equal(again.cleanModelChoice('gpt-5.5'), null)
+})
+
+test('a model Hermes refuses fails the run with a clear message and never falls back to the default', async () => {
+  const hermes = gateway({ refuse: params => (params.model ? { code: -32602, message: "Model 'gpt-5.5' is not served by provider 'anthropic'." } : null) })
+  const wb = load({ host: hermes.host, storage: memoryStorage() })
+
+  wb.hydrate(memoryStorage())
+  wb.setModelChoice('agent', { model: 'gpt-5.5', provider: 'anthropic' })
+  await assert.rejects(wb.runSession({ maxMs: 1000, maxSteps: 4, role: 'agent', text: 'do it', title: 'T' }), error => {
+    assert.match(error.message, /^Agent model gpt-5\.5 isn't available in Hermes\./)
+    assert.match(error.message, /not served by provider/)
+
+    return true
+  })
+  // One attempt, with the model. No second create without it, and nothing was submitted.
+  assert.deepEqual(hermes.creates(), [{ hidden: true, model: 'gpt-5.5', provider: 'anthropic', title: 'T' }])
+  assert.equal(hermes.calls.some(([method]) => method === 'prompt.submit'), false)
+
+  // A planning run names its own setting, and an unrelated failure is passed through as it is.
+  wb.setModelChoice('planning', { model: 'gpt-5.5', provider: 'anthropic' })
+  await assert.rejects(wb.runSession({ maxMs: 1000, maxSteps: 4, role: 'planning', text: 'x', title: 'T' }), /^Error: Planning model gpt-5\.5 isn't available/)
+
+  const down = gateway({ refuse: () => ({ code: 5001, message: 'gateway restarting' }) })
+  const other = load({ host: down.host, storage: memoryStorage() })
+
+  other.hydrate(memoryStorage())
+  await assert.rejects(other.runSession({ maxMs: 1000, maxSteps: 4, text: 'x', title: 'T' }), /^Error: gateway restarting$/)
+})
+
+test('the model pickers list only providers Hermes says are signed in', async () => {
+  const hermes = gateway({
+    models: {
+      model: 'hermes-4-pro',
+      provider: 'anthropic',
+      providers: [
+        { authenticated: true, models: ['hermes-4-pro', 'hermes-4-mini', '', 7], name: 'Anthropic', slug: 'anthropic' },
+        { authenticated: false, models: ['gpt-5.5'], name: 'OpenAI', slug: 'openai' },
+        { models: ['local-llama'], name: '', slug: 'custom:lab' },
+        { authenticated: true, models: [], name: 'Empty', slug: 'empty' },
+        'junk'
+      ]
+    }
+  })
+  const wb = load({ host: hermes.host, storage: memoryStorage() })
+
+  await wb.loadModelOptions()
+  assert.deepEqual(JSON.parse(JSON.stringify(wb.$modelOptions.get())), {
+    error: '',
+    loading: false,
+    providers: [
+      { models: ['hermes-4-pro', 'hermes-4-mini'], name: 'Anthropic', slug: 'anthropic' },
+      { models: ['local-llama'], name: 'custom:lab', slug: 'custom:lab' }
+    ]
+  })
+  assert.deepEqual(hermes.calls, [['model.options', {}]])
+
+  const broken = load({ host: gateway({ models: new Error('gateway restarting') }).host, storage: memoryStorage() })
+
+  await broken.loadModelOptions()
+  assert.match(broken.$modelOptions.get().error, /could not list your models: gateway restarting/)
 })
