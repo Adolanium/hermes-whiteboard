@@ -92,6 +92,56 @@ const unfence = text =>
     .replace(/\s*```$/, '')
     .trim()
 
+/** The assistant's last words after the newest user turn of a stored
+ *  transcript. Older assistant rows are ignored, so an empty turn is never
+ *  mistaken for an answered one. */
+function finalAssistantText(messages) {
+  if (!Array.isArray(messages)) {
+    return ''
+  }
+
+  let lastUser = -1
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === 'user') {
+      lastUser = index
+      break
+    }
+  }
+
+  for (let index = messages.length - 1; index > lastUser; index -= 1) {
+    const message = messages[index]
+
+    if (message?.role === 'assistant' && typeof message.text === 'string' && message.text.trim()) {
+      return message.text
+    }
+  }
+
+  return ''
+}
+
+/** The answer of a turn whose message.complete came without text. Hermes sends
+ *  an empty completion when another process owned the turn: the reply was
+ *  streamed or only stored, and the client is expected to read it back. The
+ *  stored transcript is the authority. What was streamed after the last tool
+ *  call is the fallback when the transcript cannot be read. */
+async function recoverReply(sid, streamed) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const history = await withTimeout(host.request('session.history', { session_id: sid }), 8000)
+      const text = finalAssistantText(history?.messages)
+
+      if (text.trim()) {
+        return text
+      }
+    } catch {
+      // Try once more, then fall back to what was streamed.
+    }
+  }
+
+  return streamed
+}
+
 function withTimeout(promise, ms) {
   let timer = null
 
@@ -1758,6 +1808,30 @@ async function runSession({ maxMs, maxSteps, onActivity, role = 'agent', text, t
       }
     })
   )
+  // Text streamed since the last tool call, kept in case the completion comes without it.
+  let streamed = ''
+
+  stops.push(
+    host.onEvent('message.delta', event => {
+      if (event?.session_id === sid && typeof event.payload?.text === 'string') {
+        streamed += event.payload.text
+      }
+    })
+  )
+  stops.push(
+    host.onEvent('message.interim', event => {
+      if (event?.session_id === sid) {
+        streamed = ''
+      }
+    })
+  )
+  stops.push(
+    host.onEvent('tool.start', event => {
+      if (event?.session_id === sid) {
+        streamed = ''
+      }
+    })
+  )
   stops.push(
     host.onEvent('message.complete', event => {
       if (event?.session_id !== sid) {
@@ -1770,8 +1844,10 @@ async function runSession({ maxMs, maxSteps, onActivity, role = 'agent', text, t
 
       if (/interrupt|cancel|fail|error/i.test(status) && !reply.trim()) {
         finish(new Error(`The turn ended as ${status}.`))
-      } else {
+      } else if (reply.trim()) {
         finish(null, reply)
+      } else {
+        void recoverReply(sid, streamed).then(text => finish(null, text), () => finish(null, streamed))
       }
     })
   )
@@ -2328,7 +2404,7 @@ async function runAgent(noteId, extra = {}) {
     const parsed = parseRunReply(run.reply)
 
     if (!parsed) {
-      throw new Error('The agent finished without a result.')
+      throw new Error('The agent finished, but Hermes sent no answer text and none was stored for the run. Try again.')
     }
 
     deliverResult(noteId, { ...parsed, flags: run.flags, model: run.model, sources: parsed.sources.length > 0 ? parsed.sources : run.visited.slice(0, MAX_SOURCES), steps: run.steps, trace: run.storedSessionId }, cursorId)
@@ -2727,7 +2803,7 @@ async function askHermes(question, ids) {
     const parsed = parseRunReply(run.reply)
 
     if (!parsed || token.cancelled) {
-      throw new Error(token.cancelled ? 'stopped' : 'Hermes did not send an answer. Try asking again.')
+      throw new Error(token.cancelled ? 'stopped' : 'Hermes finished, but sent no answer text and none was stored for the run. Try asking again.')
     }
 
     const current = $board.get()
