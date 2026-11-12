@@ -1636,7 +1636,7 @@ async function loadModelOptions() {
   $modelOptions.set({ ...$modelOptions.get(), error: '', loading: true })
 
   try {
-    const listed = await host.request('model.options', {})
+    const listed = await profileRequest('model.options', {})
     const providers = (Array.isArray(listed?.providers) ? listed.providers : [])
       .filter(entry => entry && typeof entry === 'object' && entry.authenticated !== false && typeof entry.slug === 'string' && Array.isArray(entry.models))
       .map(entry => ({ models: entry.models.filter(model => typeof model === 'string' && model.trim()).slice(0, 80), name: clean(entry.name || entry.slug, 40), slug: entry.slug }))
@@ -1665,7 +1665,7 @@ function modelRefusal(error, role, choice) {
 
 async function createHiddenSession(title, choice = null, role = 'agent') {
   try {
-    return await host.request('session.create', sessionParams({ hidden: true, title }, choice))
+    return await profileRequest('session.create', sessionParams({ hidden: true, title }, choice))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const code = error && typeof error === 'object' ? error.code : undefined
@@ -1682,7 +1682,7 @@ async function createHiddenSession(title, choice = null, role = 'agent') {
   let created
 
   try {
-    created = await host.request('session.create', sessionParams({ title }, choice))
+    created = await profileRequest('session.create', sessionParams({ title }, choice))
   } catch (error) {
     const code = error && typeof error === 'object' ? error.code : undefined
 
@@ -3127,6 +3127,41 @@ function backendKey() {
   }
 
   return `${read(host.state?.connectionId)}|${read(host.state?.profile)}`
+}
+
+/** The route descriptor for the profile selected in Hermes, kept for half a minute. */
+let profileRoute = { at: 0, key: '', route: null }
+
+/** A request that is not tied to a session yet: starting a session, a one-shot
+ *  model call, a listing. Hermes can serve several profiles from one gateway,
+ *  and there a plain host.request lands in the gateway's own profile, not the
+ *  one selected. host.requestProfile routes it to the selected profile. Once a
+ *  session exists, requests that name it follow that session by themselves. */
+async function profileRequest(method, params = {}) {
+  const [connection, profile] = backendKey().split('|')
+
+  if (!profile || typeof host.requestProfile !== 'function') {
+    return host.request(method, params)
+  }
+
+  const key = backendKey()
+
+  if (profileRoute.key !== key || Date.now() - profileRoute.at > 30000) {
+    let route = null
+
+    try {
+      const routes = typeof host.profileRoutes === 'function' ? await host.profileRoutes() : []
+
+      route = (Array.isArray(routes) ? routes : []).find(entry => entry?.profile === profile && (!connection || entry.connectionId === connection)) || null
+    } catch {
+      route = null
+    }
+
+    profileRoute = { at: Date.now(), key, route }
+  }
+
+  // A user started this, so a backend that has to wake up for it is not queued.
+  return host.requestProfile(profileRoute.route || profile, method, params, undefined, { spawnPriority: 'foreground' })
 }
 
 /** One round with the chat tools: take what chats sent, and make sure this
