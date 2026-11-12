@@ -2,6 +2,8 @@
 
 An agentic whiteboard for Hermes Desktop. You think a plan through on a board. Hermes lays it out, finds the groups in your notes, and sends agents to do the work, right there on the board.
 
+Part of [Hermes Folio](https://adolanium.github.io/hermes-folio/), with [Sheets](https://github.com/Adolanium/hermes-sheets) and [Data](https://github.com/Adolanium/hermes-data). Each works alone.
+
 ![A route Hermes laid out and ran: six stops, the road gold behind it, results delivered next to each action item](docs/assets/route.jpg)
 
 ## What it does
