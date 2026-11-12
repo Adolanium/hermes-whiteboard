@@ -2981,7 +2981,12 @@ function takeSuiteNotes(detail) {
   const frame = { ...size, id: uid('f'), kind: 'frame', rev: rev(), sticker: detail.from === 'data' ? 'chart' : undefined, title, x: spot.x, y: spot.y }
   const notes = frameSlots(frame, texts.length, cols).map((slot, index) => makeNote({ ...slot, frame: frame.id, text: texts[index], tone: detail.from === 'data' ? 'butter' : 'mint' }))
 
-  addItems([{ ...frame, sticker: STICKERS[frame.sticker] ? frame.sticker : undefined }, ...notes.map(note => ({ ...note, tone: TONES[note.tone] ? note.tone : 'butter' }))])
+  // One change, so one undo takes it all back. An empty, unnamed board takes the group's name.
+  setBoard({
+    ...board,
+    items: [...board.items, { ...frame, sticker: STICKERS[frame.sticker] ? frame.sticker : undefined }, ...notes.map(note => ({ ...note, tone: TONES[note.tone] ? note.tone : 'butter' }))],
+    name: board.items.length === 0 && /^untitled/i.test(board.name) ? title : board.name
+  })
 
   return frame.id
 }
