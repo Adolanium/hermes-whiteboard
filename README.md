@@ -1,3 +1,5 @@
+<img src="docs/assets/nous-girl-folio.svg" width="88" height="88" align="right" alt="The Nous Girl, the Hermes Agent mark, in the Hermes Folio colours" />
+
 # Hermes Whiteboard
 
 An agentic whiteboard for Hermes Desktop. You think a plan through on a board. Hermes lays it out, finds the groups in your notes, and sends agents to do the work, right there on the board.
