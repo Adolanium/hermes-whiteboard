@@ -30,6 +30,10 @@ Part of [Hermes Folio](https://adolanium.github.io/hermes-folio/), with [Sheets]
 
 **From any chat.** Once you allow it, any Hermes chat can read your boards, start a new one, and propose notes, groups and action items that wait on the board for you.
 
+**A board linked to its chat.** A board a chat made stays linked to that chat, and you can link any other board from the boards menu. On a linked board, Hand to Hermes and Run ask first where the work should go. **Ask in the linked chat** opens the chat with the request written in its message box, and you send it, so the chat that already owns the work does it, with its own approvals. **Start separate work here** runs agents from the board as before. While the chat works on it, the note says so. When the chat answers, the answer waits under Suggestions and becomes a result card beside the note once you accept it.
+
+**To and from Kanban.** Select notes and press **Send to Kanban** to make one card per note on a Hermes Kanban board you pick. Cards are parked in Blocked with nobody assigned, so nothing runs until you unblock them. Tick **Let Hermes start on them** and they go to Triage instead, where Hermes splits each one into tasks and its agents begin. A second click on the same note gives the same card, not a copy. A note shows where its card is now (Blocked, Running, Done), checked every half minute while the page is open. **New board from Kanban** lays a Kanban board out as a whiteboard, one column per status. When cards move or new ones appear in Kanban, the board offers **Refresh**, which moves the notes to match in one undoable step. Nothing you do on the whiteboard changes Kanban.
+
 **Take it with you.** Export a board as Markdown, as CSV, or copy it as a table to paste into Hermes Sheets or any spreadsheet.
 
 ## Install
@@ -92,7 +96,9 @@ Your Hermes Desktop  →  local board storage  →  your Hermes model (only when
 - **Chats can read my boards** is off until you turn it on in Settings. While it is on, Whiteboard keeps a copy of each board under `plugin-data/whiteboard/` in your Hermes home so the chat tools can read it. The copies live in the plugin data of the profile you are in, and each profile where Whiteboard is installed gets its own when you open Hermes on it. Turning it off deletes the copies in the profile you are in straight away, and in each other profile the next time you open Hermes on it.
 - **Export** writes the one Markdown or CSV file you name in the system save dialog. The page opens the dialog with the Desktop SDK and hands the path to Whiteboard's own backend, which refuses other file types and anything inside your Hermes home.
 - **Sheets and Data pin notes here inside the app window**, with a browser event between the pages, and only when you click. Nothing is written to disk for it, no backend is called and no model is involved. The notes are added beside what is on the board and never change it. Any other Desktop plugin you have switched on runs in the same window and could send or read such an event.
-- No telemetry, no credentials, no shell commands or background processes of its own. The page makes no network requests of its own.
+- **A linked chat** is remembered as that chat's id on the board. Whiteboard never sends a message to it: **Ask in the linked chat** opens the chat and puts the request in its message box, and nothing goes until you press Enter. To list your chats for linking, the page asks Hermes for their titles. After you send a request from the board, the page listens to that one chat until its answer arrives, and reads the answer from the chat's transcript. It takes only an answer to the request the board wrote, and it stops listening after 30 minutes.
+- **Kanban** is reached only when you click. Whiteboard's backend runs the `hermes kanban` command, with no shell, to list your boards, create cards and read one board. While the page is open on a board that has Kanban cards, it reads those Kanban boards again about every 25 seconds to show each card's status. Cards are created in Blocked, where Hermes leaves them alone. They are created in Triage, which Hermes works through on its own on your model, only when you tick **Let Hermes start on them**. A card carries the note's text, its owner and due date, a line from its result if it has one, and the board's name. Note text is passed after `--` and on standard input, so it cannot be read as an option.
+- No telemetry, no credentials and no background processes of its own. The only command it runs is `hermes kanban`, as above. The page makes no network requests of its own.
 
 ## Limits
 
@@ -100,6 +106,8 @@ Your Hermes Desktop  →  local board storage  →  your Hermes model (only when
 - Stickers are a built-in set. Hermes picks among them; it does not generate images.
 - Chats see boards only while Hermes Desktop is running with Whiteboard switched on.
 - A board holds up to 600 items.
+- A linked chat is followed only while Hermes Desktop is open, and only for requests sent from the board. One answer covering several notes is attached to the first of them.
+- Send to Kanban takes up to 24 notes at a time. Kanban is read, never changed, after a card is made: moving a note does not move its card.
 
 ## Development checks
 

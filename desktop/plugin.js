@@ -1476,6 +1476,10 @@ function proposalLabel(item) {
     return `Action: ${item.text}${item.owner ? ` (${item.owner})` : ''}`
   }
 
+  if (item.kind === 'result') {
+    return `Result for "${clean(item.noteText, 40)}": ${item.title || clean(item.text, 60)}`
+  }
+
   return `Note: ${item.text}`
 }
 
@@ -1489,7 +1493,7 @@ function staleReason(board, item) {
     return live.length < 2 ? 'Most of these notes are gone.' : ''
   }
 
-  if (item.kind === 'owner') {
+  if (item.kind === 'owner' || item.kind === 'result') {
     return lookup.get(item.noteId)?.kind === 'note' ? '' : 'That note is gone.'
   }
 
@@ -1543,6 +1547,21 @@ function applyProposalItem(board, item) {
     frameSlots(frame, members.length, cols).forEach((slot, index) => replace(members[index].id, { ...slot, frame: frame.id }))
   } else if (item.kind === 'owner') {
     replace(item.noteId, { owner: item.owner })
+  } else if (item.kind === 'result') {
+    // What the linked chat reports for a note: a result card beside it, like one
+    // an agent delivers, marked as coming from the chat.
+    const note = lookup.get(item.noteId)
+    const text = String(item.text || '')
+    const h = clamp(96 + (Math.ceil(text.length / 44) + text.split('\n').length) * 15, 150, 420)
+    const spot = freeSpot({ ...board, items }, 300, h, { x: note.x + note.w + 48, y: note.y - 8 })
+    const card = { by: 'chat', for: note.id, h, id: uid('d'), kind: 'result', rev: rev(), sources: [], stamp: 'From chat', steps: 0, text, title: item.title || clean(text, 60), w: 300, x: spot.x, y: spot.y }
+    const link = { from: note.id, id: uid('l'), kind: 'result', to: card.id }
+
+    items = [...items, card]
+    created.push(card.id)
+    replace(note.id, { status: 'delivered' })
+    links = [...links, link]
+    createdLinks.push(link.id)
   } else {
     const anchor = item.from ? lookup.get(item.from) : null
     // A step that comes out of a note in a group belongs in that group.
@@ -3207,7 +3226,666 @@ function chatProposal(entry) {
     }
   }
 
+  for (const result of (Array.isArray(entry.results) ? entry.results : []).slice(0, 10)) {
+    const text = String(result?.text || '').trim().slice(0, 1500)
+
+    if (clean(result?.note, 60) && text) {
+      items.push({ by: 'chat', id: uid('pi'), kind: 'result', noteId: clean(result.note, 60), noteText: clean(result.noteText, 80), reason: clean(result.reason, 160), state: 'pending', text, title: clean(result.headline, 80) || undefined })
+    }
+  }
+
   return items.length > 0 ? { at: Date.now(), from: 'chat', id: uid('pr'), items, summary: clean(entry.summary, 200) || 'Suggested in a chat' } : null
+}
+
+// ---------------------------------------------------------------------------
+// A board linked to a chat. A board a chat made, or one the person links by
+// hand, belongs to the work going on in that chat. On such a board Hand to
+// Hermes and Run ask first: put the request to the linked chat, which already
+// owns the work, or start separate work from the board. Nothing is ever sent
+// to the chat by the page: the request is placed in the chat's message box and
+// the person sends it. What the chat reports comes back as suggestions.
+// ---------------------------------------------------------------------------
+const $handoff = atom(null)
+
+function linkChat(chat) {
+  const id = clean(chat?.id, 200)
+
+  if (!id) {
+    return false
+  }
+
+  setBoard({ ...$board.get(), chat: { id, ...(clean(chat.title, 80) ? { title: clean(chat.title, 80) } : {}) } })
+
+  return true
+}
+
+function unlinkChat() {
+  const board = { ...$board.get() }
+
+  delete board.chat
+  setBoard(board)
+}
+
+/** The person's recent chats, for picking one to link. Hermes lists the chats it
+ *  has open and the stored ones separately, so both are asked for. Hidden runs
+ *  are left out by Hermes. */
+async function listChats(limit = 40) {
+  const rowsOf = answer => (Array.isArray(answer?.sessions) ? answer.sessions : [])
+  const open = rowsOf(await profileRequest('session.list', { limit }))
+  // A Hermes without the stored list answers the first call with everything.
+  const stored = await profileRequest('session.list', { limit, scope: 'stored' }).then(rowsOf, () => [])
+  const seen = new Set()
+  const chats = []
+
+  for (const row of [...open, ...stored]) {
+    const id = typeof row?.id === 'string' && row.id ? row.id : typeof row?.session_id === 'string' ? row.session_id : ''
+
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      chats.push({ id, started: Number(row.started_at) || 0, title: clean(row.title || row.preview, 80) || 'Untitled chat', ...(typeof row.session_id === 'string' && row.session_id && row.session_id !== id ? { sid: row.session_id } : {}) })
+    }
+  }
+
+  return chats.sort((a, b) => b.started - a.started).map(({ started: _started, ...chat }) => chat)
+}
+
+/** The first line of every request the board writes. It is how an answer is told from other talk. */
+const chatMarker = board => `From the Whiteboard board "${clean(board.name, 80)}", which is linked to this chat.`
+
+/** What is put in the linked chat's message box for one or more notes. */
+function chatRequest(board, notes, sharing) {
+  const name = clean(board.name, 80)
+  const lines = notes.map(note => `- ${clean(note.text, 280)}${note.owner ? ` (owner: ${note.owner})` : ''}${note.due ? ` (due: ${note.due})` : ''}`)
+
+  return [
+    chatMarker(board),
+    notes.length === 1 ? 'Please do this item from the board:' : `Please do these ${notes.length} items from the board, in this order:`,
+    lines.join('\n'),
+    'This belongs to the work already going on in this chat, so carry on from where it stands. If an item is already done or under way, say so instead of doing it again.',
+    sharing ? `When an item has a result, put it on the board with whiteboard_propose (board "${name}", "results", with the note's id from whiteboard_read). It waits there for me to accept.` : ''
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+async function openLinkedChat(id) {
+  if (typeof host.openSession !== 'function') {
+    throw new Error('This Hermes cannot open a chat from Whiteboard. Update Hermes Desktop.')
+  }
+
+  await host.openSession(id)
+}
+
+/** Open the chat and put the text in its message box. The person presses Enter. */
+async function seatInChat(id, text, tries = 16) {
+  await openLinkedChat(id)
+
+  for (let attempt = 0; attempt < tries; attempt += 1) {
+    try {
+      if (await host.composer?.insertText?.(id, text, { mode: 'block' })) {
+        host.composer.focus?.(id)
+
+        return 'seated'
+      }
+    } catch {
+      // The chat is still opening; try again.
+    }
+
+    await wait(250)
+  }
+
+  if (await pluginOs?.writeClipboard?.(text)) {
+    return 'copied'
+  }
+
+  throw new Error("The chat opened, but its message box did not take the request. Type it there yourself.")
+}
+
+/** Put the picked notes to the linked chat, and mark them as asked there. */
+async function askLinkedChat(noteIds) {
+  const board = $board.get()
+  const lookup = byId(board)
+  const notes = noteIds.map(id => lookup.get(id)).filter(item => item?.kind === 'note' && String(item.text || '').trim())
+
+  if (!board.chat?.id) {
+    throw new Error('This board is not linked to a chat.')
+  }
+
+  if (notes.length === 0) {
+    throw new Error('Pick a note with some text on it first.')
+  }
+
+  const how = await seatInChat(board.chat.id, chatRequest(board, notes, $chatSharing.get()))
+  const asked = new Set(notes.map(note => note.id))
+  const now = $board.get()
+
+  if (now.id === board.id) {
+    setBoard({ ...now, items: now.items.map(item => (asked.has(item.id) ? { ...item, asked: Date.now(), rev: rev() } : item)) })
+  }
+
+  followAsk({ board: board.id, chat: board.chat.id, marker: chatMarker(board), noteIds: notes.map(note => note.id) })
+
+  return how
+}
+
+// Following the linked chat. Once a request is in the chat's message box, the
+// page listens to that chat. While its turn runs, the notes say so. When the
+// turn ends, the answer is put under Suggestions as a result for the note,
+// where it waits to be accepted. Only an answer to the request the board wrote
+// is taken, and not when the chat already reported through its own tools. The
+// page reads the chat; it never writes to it.
+const $asks = atom([])
+const ASK_TTL_MS = 30 * 60 * 1000
+const runtimeChats = new Map()
+const chatLookups = new Map()
+
+function followAsk(ask) {
+  const now = Date.now()
+
+  $asks.set([...$asks.get().filter(entry => now - entry.at < ASK_TTL_MS && !(entry.board === ask.board && entry.chat === ask.chat)), { ...ask, at: now, id: uid('a'), sid: '', state: 'waiting', streamed: '', viaTool: false }])
+}
+
+const patchAsk = (id, patch) => $asks.set($asks.get().map(entry => (entry.id === id ? { ...entry, ...patch } : entry)))
+
+/** Find which chat a live session id belongs to, and tie a waiting request to it. */
+function claimSession(sid) {
+  const last = chatLookups.get(sid) || 0
+
+  if (Date.now() - last < 5000) {
+    return
+  }
+
+  chatLookups.set(sid, Date.now())
+  void profileRequest('session.list', { limit: 200 })
+    .then(answer => {
+      for (const row of Array.isArray(answer?.sessions) ? answer.sessions : []) {
+        if (typeof row?.session_id === 'string' && row.session_id) {
+          runtimeChats.set(row.session_id, String(row.id || row.session_id))
+        }
+      }
+
+      const stored = runtimeChats.get(sid) || sid
+      const ask = $asks.get().find(entry => !entry.sid && (entry.chat === stored || entry.chat === sid))
+
+      if (ask) {
+        patchAsk(ask.id, { sid })
+      }
+    })
+    .catch(() => undefined)
+}
+
+function lastUserText(messages) {
+  for (let index = (Array.isArray(messages) ? messages.length : 0) - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === 'user') {
+      return String(messages[index].text ?? messages[index].content ?? '')
+    }
+  }
+
+  return ''
+}
+
+/** A turn of the linked chat ended. Take its answer, if it answered the board's request. */
+async function finishAsk(ask, payload) {
+  $asks.set($asks.get().filter(entry => entry.id !== ask.id))
+
+  let reply = String(payload?.text ?? payload?.content ?? '')
+  let ours = null
+
+  try {
+    const history = await withTimeout(host.request('session.history', { session_id: ask.sid }), 8000)
+
+    ours = lastUserText(history?.messages).includes(ask.marker)
+    reply = reply.trim() ? reply : finalAssistantText(history?.messages)
+  } catch {
+    // The transcript could not be read. What was streamed is still the answer to something asked here.
+  }
+
+  if (ours === false) {
+    // The person sent something else first. Keep waiting for the request itself.
+    $asks.set([...$asks.get(), { ...ask, state: 'waiting', streamed: '', viaTool: false }])
+
+    return 'other'
+  }
+
+  // The chat used its own Whiteboard tool. That only counts if a result for
+  // these notes really reached the board: the tool refuses when chat access is
+  // off. What it sends is collected every few seconds, so give it that long.
+  if (ask.viaTool) {
+    await wait(CHAT_POLL_MS + 2500)
+
+    const holder = ask.board === $board.get().id ? $board.get() : restoreBoard(storage?.get(boardKey(ask.board), null), ask.board)
+
+    if (holder?.proposals.some(proposal => proposal.from === 'chat' && proposal.at >= ask.at && proposal.items.some(item => item.kind === 'result' && ask.noteIds.includes(item.noteId)))) {
+      return 'tool'
+    }
+  }
+
+  const text = (reply.trim() || ask.streamed.trim()).slice(0, 1500)
+
+  if (!text) {
+    return 'empty'
+  }
+
+  const boardNow = ask.board === $board.get().id ? $board.get() : restoreBoard(storage?.get(boardKey(ask.board), null), ask.board)
+  const note = boardNow ? byId(boardNow).get(ask.noteIds.find(id => byId(boardNow).get(id)?.kind === 'note')) : null
+
+  if (!note) {
+    return 'gone'
+  }
+
+  const many = ask.noteIds.length > 1
+  const headline = clean(text.split('\n').find(line => line.trim())?.replace(/^[#>*\-\s]+/, '').replace(/[*_`]/g, ''), 80)
+  const proposal = chatProposal({
+    results: [{ headline, note: note.id, noteText: clean(note.text, 80), reason: many ? `One answer from the linked chat for the ${ask.noteIds.length} items you sent.` : 'The answer from the linked chat.', text }],
+    summary: 'The linked chat answered'
+  })
+
+  if (!proposal) {
+    return 'empty'
+  }
+
+  if (boardNow.id === $board.get().id) {
+    setBoard({ ...$board.get(), proposals: [...$board.get().proposals, proposal] }, { undo: false })
+    $panel.set(true)
+  } else {
+    storage?.set(boardKey(boardNow.id), { ...boardNow, proposals: [...boardNow.proposals, proposal] })
+  }
+
+  host.notify?.({
+    action: {
+      label: 'Open',
+      onClick: () => {
+        host.navigate(ROUTE)
+        switchBoard(boardNow.id)
+        $panel.set(true)
+      }
+    },
+    durationMs: 15000,
+    kind: 'success',
+    message: `Its answer is waiting under Suggestions on ${clean(boardNow.name, 50)}.`,
+    title: 'The linked chat answered'
+  })
+
+  return 'taken'
+}
+
+function chatEvent(type, event) {
+  const asks = $asks.get()
+  const sid = typeof event?.session_id === 'string' ? event.session_id : ''
+
+  if (asks.length === 0 || !sid) {
+    return
+  }
+
+  const ask = asks.find(entry => entry.sid === sid)
+
+  if (!ask) {
+    if (asks.some(entry => !entry.sid)) {
+      claimSession(sid)
+    }
+
+    return
+  }
+
+  if (type === 'message.complete') {
+    void finishAsk(ask, event.payload).catch(() => undefined)
+  } else if (type === 'error') {
+    patchAsk(ask.id, { state: 'waiting', streamed: '' })
+  } else if (type === 'tool.start') {
+    const name = String(event.payload?.name ?? event.payload?.tool_name ?? '')
+
+    patchAsk(ask.id, { state: 'working', streamed: '', ...(name === 'whiteboard_propose' ? { viaTool: true } : {}) })
+  } else if (type === 'message.interim') {
+    patchAsk(ask.id, { state: 'working', streamed: '' })
+  } else if (type === 'message.delta') {
+    patchAsk(ask.id, { state: 'working', streamed: ask.streamed + (typeof event.payload?.text === 'string' ? event.payload.text : '') })
+  } else {
+    patchAsk(ask.id, { state: 'working' })
+  }
+}
+
+function watchLinkedChat() {
+  const stops = ['message.start', 'message.delta', 'message.interim', 'tool.start', 'message.complete', 'error'].map(type =>
+    host.onEvent(type, event => {
+      try {
+        chatEvent(type, event)
+      } catch {
+        // A listener must never break the chat it listens to.
+      }
+    })
+  )
+
+  return () => stops.forEach(stop => typeof stop === 'function' && stop())
+}
+
+/** Hand to Hermes, from a click. A linked board asks where the work should go. */
+function requestHand(noteIds) {
+  if ($board.get().chat?.id) {
+    $handoff.set({ noteIds })
+
+    return
+  }
+
+  noteIds.forEach(id => handToHermes(id))
+}
+
+/** Run the plan, from a click. A linked board asks where the work should go. */
+function requestRun() {
+  const board = $board.get()
+
+  if (board.chat?.id && !$plan.get().active) {
+    $handoff.set({ noteIds: planStops(board).flatMap(stop => stop.notes.map(note => note.id)), plan: true })
+
+    return
+  }
+
+  void runPlan()
+}
+
+// ---------------------------------------------------------------------------
+// Hermes Kanban. A note can become a card on a Kanban board, and a Kanban board
+// can be laid out as a whiteboard. Both go through this plugin's own backend
+// (kanban.py), which runs the documented `hermes kanban` command. A card
+// made from a note is parked in Blocked with nobody assigned, so nothing runs
+// until a person unblocks it on the Kanban board. Hermes works through Triage
+// on its own, so a card goes there only when the person asks for that.
+// ---------------------------------------------------------------------------
+const KANBAN_COLUMNS_ORDER = ['Triage', 'To do', 'Ready', 'Running', 'Blocked', 'Review', 'Done']
+const KANBAN_COLUMNS = { blocked: 'Blocked', done: 'Done', ready: 'Ready', review: 'Review', running: 'Running', todo: 'To do', triage: 'Triage' }
+const KANBAN_MAX = 24
+
+/** Ask the backend, and turn its `{ok: false, error}` into a thrown error. */
+async function kanbanRest(path, options) {
+  if (!pluginRest) {
+    throw new Error("Whiteboard's backend isn't running, so it cannot reach Kanban.")
+  }
+
+  let answer = null
+
+  try {
+    answer = await pluginRest(path, options)
+  } catch {
+    // The backend answers its older routes but not this one: Whiteboard was
+    // updated while Hermes was running, and the backend is still the old one.
+    const older = await pluginRest('/inbox').then(() => true, () => false)
+
+    throw new Error(
+      older
+        ? "Whiteboard was updated, but its backend is still the older version, so it cannot reach Kanban yet. Restart the Hermes gateway to finish the update."
+        : "Whiteboard's backend isn't running in this Hermes profile, so it cannot reach Kanban. Install Whiteboard for this profile and switch it on in Capabilities > Plugins."
+    )
+  }
+
+  if (!answer || answer.ok !== true) {
+    throw new Error(String(answer?.error || 'Kanban did not answer. Quit Hermes Desktop and open it again, then try once more.'))
+  }
+
+  return answer
+}
+
+/** A note as a Kanban card: its first line is the title, the whole note the body,
+ *  with what the board knows about it underneath. */
+function kanbanCardOf(board, note) {
+  const text = String(note.text || '').trim()
+  const title = clean(text.split('\n').find(line => line.trim()) || '', 120)
+  const delivered = board.items.find(item => item.kind === 'result' && item.for === note.id)
+  const facts = [note.owner ? `Owner: ${note.owner}` : '', note.due ? `Due: ${note.due}` : '', delivered ? `Result on the board: ${clean(delivered.headline || delivered.title || '', 160)}` : ''].filter(Boolean)
+
+  return { body: [text, facts.join('\n'), `From the Whiteboard board "${clean(board.name, 80)}".`].filter(Boolean).join('\n\n').slice(0, 4000), key: `${board.id}:${note.id}`, title }
+}
+
+/** Make a card for each picked note, and mark the notes with their cards. The
+ *  cards are parked in Blocked unless `start` asks Hermes to take them on. */
+async function sendToKanban(noteIds, slug, start = false) {
+  const board = $board.get()
+  const lookup = byId(board)
+  const notes = noteIds.map(id => lookup.get(id)).filter(item => item?.kind === 'note' && String(item.text || '').trim())
+
+  if (notes.length === 0) {
+    throw new Error('Pick a note with some text on it first.')
+  }
+
+  if (notes.length > KANBAN_MAX) {
+    throw new Error(`Send at most ${KANBAN_MAX} notes to Kanban at a time.`)
+  }
+
+  const answer = await kanbanRest('/kanban/cards', { body: { board: slug, cards: notes.map(note => kanbanCardOf(board, note)), start: start === true }, method: 'POST' })
+  const made = new Map((Array.isArray(answer.cards) ? answer.cards : []).map(card => [String(card.key), String(card.id)]))
+  const now = $board.get()
+
+  if (now.id === board.id) {
+    setBoard({ ...now, items: now.items.map(item => (made.has(`${board.id}:${item.id}`) ? { ...item, kanban: { board: String(answer.board), id: made.get(`${board.id}:${item.id}`) }, rev: rev() } : item)) })
+  }
+
+  // Where the cards were just put. The next check of Kanban corrects it.
+  $kanbanLive.set({ ...$kanbanLive.get(), ...Object.fromEntries([...made.values()].map(id => [id, start === true ? 'triage' : 'blocked'])) })
+
+  return made.size
+}
+
+// What Kanban says now. `$kanbanLive` is each card's status by card id, and
+// `$kanbanReads` the last read of each Kanban board. Neither is saved with the
+// whiteboard: they are asked for again while the page is open.
+const $kanbanLive = atom({})
+const $kanbanReads = atom({})
+const KANBAN_POLL_MS = 25000
+
+/** Ask Kanban where the cards behind this whiteboard's notes are now. Reading
+ *  is all it does. A card Kanban no longer lists was archived there. */
+async function refreshKanbanStatus() {
+  const board = $board.get()
+  const marked = board.items.filter(item => item.kanban?.id && item.kanban.board)
+  const slugs = [...new Set([...marked.map(item => String(item.kanban.board)), ...(board.fromKanban?.slug ? [String(board.fromKanban.slug)] : [])])].slice(0, 4)
+
+  if (slugs.length === 0) {
+    return null
+  }
+
+  const live = {}
+  const reads = {}
+
+  for (const slug of slugs) {
+    let read = null
+
+    try {
+      read = await kanbanRest(`/kanban/board/${encodeURIComponent(slug)}`)
+    } catch {
+      continue
+    }
+
+    reads[slug] = read
+
+    for (const column of Array.isArray(read.columns) ? read.columns : []) {
+      for (const card of Array.isArray(column.cards) ? column.cards : []) {
+        live[String(card.id)] = String(column.status)
+      }
+    }
+
+    for (const item of marked) {
+      if (String(item.kanban.board) === slug && !live[item.kanban.id]) {
+        live[item.kanban.id] = 'archived'
+      }
+    }
+  }
+
+  $kanbanLive.set({ ...$kanbanLive.get(), ...live })
+  $kanbanReads.set({ ...$kanbanReads.get(), ...reads })
+
+  return live
+}
+
+const kanbanTitle = status => KANBAN_COLUMNS[status] || clean(status, 40)
+
+/** Bring a whiteboard made from Kanban in line with a fresh read of that Kanban
+ *  board: a note for every new card, and each note in the column of its card's
+ *  status. Pure. Notes whose card is gone stay where they are. */
+function syncFromKanban(board, read) {
+  const slug = String(read?.board || '')
+  let items = board.items
+  let added = 0
+  let moved = 0
+  const touched = new Set()
+  const frameFor = status => {
+    const title = kanbanTitle(status)
+    let frame = items.find(item => item.kind === 'frame' && clean(item.title, 60).toLowerCase() === title.toLowerCase())
+
+    if (!frame) {
+      const frames = items.filter(item => item.kind === 'frame')
+      const size = frameSize(1, 1, title)
+      const spot = frames.length > 0 ? { x: Math.max(...frames.map(item => item.x + item.w)) + GAP * 2, y: Math.min(...frames.map(item => item.y)) } : freeSpot({ ...board, items }, size.w, size.h)
+
+      frame = { ...size, by: 'hermes', id: uid('f'), kind: 'frame', rev: rev(), title, x: spot.x, y: spot.y }
+      items = [...items, frame]
+    }
+
+    return frame
+  }
+
+  for (const column of Array.isArray(read?.columns) ? read.columns : []) {
+    const cards = (Array.isArray(column.cards) ? column.cards : []).filter(card => card && card.id && clean(card.title, 200))
+
+    if (cards.length === 0) {
+      continue
+    }
+
+    const frame = frameFor(column.status)
+
+    for (const card of cards) {
+      const note = items.find(item => item.kind === 'note' && item.kanban?.id === String(card.id) && String(item.kanban.board) === slug)
+
+      if (!note) {
+        if (items.length >= MAX_ITEMS) {
+          continue
+        }
+
+        items = [...items, makeNote({ by: 'hermes', frame: frame.id, kanban: { board: slug, id: String(card.id) }, text: clean(card.title, 200) })]
+        added += 1
+        touched.add(frame.id)
+      } else if (note.frame !== frame.id) {
+        touched.add(frame.id)
+
+        if (note.frame) {
+          touched.add(note.frame)
+        }
+
+        items = items.map(item => (item.id === note.id ? { ...item, frame: frame.id } : item))
+        moved += 1
+      }
+    }
+  }
+
+  // The notes of every column that gained or lost one are set out again, in a tidy grid.
+  for (const id of touched) {
+    const frame = items.find(item => item.id === id && item.kind === 'frame')
+
+    if (!frame) {
+      continue
+    }
+
+    const kids = items.filter(item => item.frame === id && item.kind === 'note')
+    const slots = frameSlots(frame, kids.length, Math.max(1, Math.round((frame.w - GAP) / (NOTE_W + GAP))))
+    const place = new Map(kids.map((kid, index) => [kid.id, slots[index]]))
+
+    items = items.map(item => (place.has(item.id) ? { ...item, ...place.get(item.id), rev: rev() } : item))
+  }
+
+  return { added, board: fitFrames({ ...board, items }), moved }
+}
+
+/** How many cards of a read are not where the whiteboard shows them: new ones,
+ *  and ones whose note sits under another status. */
+function kanbanDrift(board, read) {
+  if (!read || !Array.isArray(read.columns)) {
+    return 0
+  }
+
+  const lookup = byId(board)
+  let count = 0
+
+  for (const column of read.columns) {
+    const title = kanbanTitle(column.status).toLowerCase()
+
+    for (const card of Array.isArray(column.cards) ? column.cards : []) {
+      const note = board.items.find(item => item.kind === 'note' && item.kanban?.id === String(card?.id) && String(item.kanban.board) === String(read.board))
+
+      if (!note ? Boolean(clean(card?.title, 200)) : clean(lookup.get(note.frame)?.title, 60).toLowerCase() !== title) {
+        count += 1
+      }
+    }
+  }
+
+  return count
+}
+
+/** Read the Kanban board this whiteboard came from and bring the notes in line. One undo. */
+async function refreshFromKanban() {
+  const start = $board.get()
+
+  if (!start.fromKanban?.slug) {
+    throw new Error('This board was not made from Kanban.')
+  }
+
+  const read = await kanbanRest(`/kanban/board/${encodeURIComponent(start.fromKanban.slug)}`)
+  const board = $board.get()
+
+  if (board.id !== start.id) {
+    return { added: 0, moved: 0 }
+  }
+
+  const out = syncFromKanban(board, read)
+
+  if (out.added + out.moved > 0) {
+    setBoard(out.board)
+  }
+
+  $kanbanReads.set({ ...$kanbanReads.get(), [String(read.board)]: read })
+  void refreshKanbanStatus().catch(() => undefined)
+
+  return { added: out.added, moved: out.moved }
+}
+
+/** A Kanban board as a board spec: one column per status that has cards. */
+function kanbanSpec(read) {
+  const sections = (Array.isArray(read?.columns) ? read.columns : [])
+    .map(column => ({ notes: (Array.isArray(column.cards) ? column.cards : []).map(card => clean(card?.title, 200)).filter(Boolean), title: KANBAN_COLUMNS[column.status] || clean(column.status, 40) }))
+    .filter(section => section.title && section.notes.length > 0)
+
+  // A board needs two columns. When every card has the same status, the next
+  // status in Kanban's order stands beside it, empty.
+  if (sections.length === 1) {
+    const order = Object.values(KANBAN_COLUMNS_ORDER)
+    const at = order.indexOf(sections[0].title)
+    const beside = at < 0 ? 'To do' : order[at + 1] || order[at - 1]
+
+    sections[at >= 0 && at === order.length - 1 ? 'unshift' : 'push']({ notes: [], title: beside })
+  }
+
+  return sections.length > 0 ? parseBoardSpec({ layout: 'columns', sections, title: `${clean(read.name || 'Kanban', 60)}, from Kanban` }) : null
+}
+
+/** Lay a Kanban board out as a new whiteboard, one column per status, every
+ *  card a note that remembers its card. Nothing is written back to Kanban. */
+async function boardFromKanban(slug) {
+  const read = await kanbanRest(`/kanban/board/${encodeURIComponent(slug)}`)
+  const spec = kanbanSpec(read)
+
+  if (!spec) {
+    throw new Error('That Kanban board has no cards to lay out.')
+  }
+
+  // The columns are laid out empty, then filled from the read, so every card
+  // is there however many a column holds.
+  const { items, links } = layoutSpec({ ...spec, sections: spec.sections.map(section => ({ ...section, notes: [] })) })
+  const board = syncFromKanban({ ...emptyBoard(spec.title), fromKanban: { name: clean(read.name, 60), slug: String(read.board || slug) }, items, layout: spec.layout, links }, read).board
+
+  $kanbanReads.set({ ...$kanbanReads.get(), [String(read.board || slug)]: read })
+
+  storage?.set(boardKey(board.id), board)
+  $index.set({ ...$index.get(), boards: [...$index.get().boards, boardMeta(board)] })
+  storage?.set(INDEX_KEY, $index.get())
+  switchBoard(board.id)
+
+  return board.items.filter(item => item.kind === 'note').length
 }
 
 function takeChatEntry(entry) {
@@ -3219,7 +3897,8 @@ function takeChatEntry(entry) {
     }
 
     const { items, links } = layoutSpec(spec)
-    const board = { ...emptyBoard(spec.title), items, layout: spec.layout, links }
+    const chatId = typeof entry.chat === 'string' ? clean(entry.chat, 200) : ''
+    const board = { ...emptyBoard(spec.title), items, layout: spec.layout, links, ...(chatId ? { chat: { id: chatId } } : {}) }
 
     storage?.set(boardKey(board.id), board)
     $index.set({ ...$index.get(), boards: [...$index.get().boards, boardMeta(board)] })
@@ -3565,6 +4244,32 @@ const CSS = `
 .wb-selected > .wb-note, .wb-selected > .wb-frame, .wb-selected > .wb-card, .wb-selected > .wb-result, .wb-selected > .wb-free { outline: 2px solid hsl(${HERMES_HUE} 85% 52%); outline-offset: 3px; }
 .wb-lit > .wb-note, .wb-lit > .wb-frame { outline: 2px dashed hsl(${HERMES_HUE} 85% 50%); outline-offset: 4px; }
 .wb-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.wb-chip.wb-kanban { background: hsl(232 26% 17%); color: hsl(40 60% 96%); border-color: hsl(232 26% 17%); }
+.wb-kanban-menu { min-width: 250px; max-width: 320px; }
+.wb-kanban-start { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--ui-stroke-secondary); font: 12.5px/1.4 var(--font-sans, system-ui); cursor: pointer; }
+.wb-kanban-start input { margin-top: 3px; }
+.wb-kanban-start small { padding: 0 !important; margin-top: 2px; }
+.wb-chat-menu { max-height: 360px; overflow-y: auto; }
+.wb-btn.wb-linked { gap: 5px; max-width: 220px; }
+.wb-btn.wb-linked svg { width: 14px; height: 14px; flex-shrink: 0; }
+.wb-btn.wb-linked span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-chip.wb-kanban.wb-kanban-running { background: hsl(41 92% 50%); border-color: hsl(41 92% 42%); color: hsl(232 26% 17%); }
+.wb-chip.wb-kanban.wb-kanban-done { background: hsl(150 45% 32%); border-color: hsl(150 45% 32%); }
+.wb-chip.wb-kanban.wb-kanban-gone { background: none; color: hsl(232 14% 40%); border-color: hsl(232 14% 60%); border-style: dashed; }
+.wb-chip.wb-asked.wb-working { background: hsl(41 92% 50%); border-color: hsl(41 92% 42%); color: hsl(232 26% 17%); }
+.wb-btn.wb-drift { border-color: hsl(41 92% 45%); }
+.wb-chip.wb-asked { background: hsl(210 60% 92%); color: hsl(215 50% 28%); border-color: hsl(210 45% 80%); }
+.wb-handoff { position: absolute; inset: 0; z-index: 12; display: flex; align-items: center; justify-content: center; background: hsl(232 26% 17% / .28); }
+.wb-handoff-card { width: 340px; max-width: calc(100% - 32px); padding: 18px; border-radius: 16px; background: var(--ui-surface-background); color: var(--ui-text-primary); border: 1.5px solid hsl(232 26% 17%); box-shadow: 4px 5px 0 hsl(232 26% 17% / .9); display: flex; flex-direction: column; gap: 6px; font: 13px/1.45 var(--font-sans, system-ui); }
+.wb-handoff-card b { font-size: 14px; }
+.wb-handoff-card p { margin: 0 0 8px; color: var(--ui-text-secondary); }
+.wb-handoff-card small { color: var(--ui-text-tertiary); font-size: 11.5px; margin: 0 2px 8px; }
+.wb-handoff-card .wb-btn { justify-content: center; gap: 6px; height: 34px; }
+.wb-handoff-card .wb-btn svg { width: 15px; height: 15px; }
+.wb-handoff-card .wb-handoff-cancel { border-color: transparent; background: none; height: 28px; }
+.wb-kanban-menu small { display: block; padding: 6px 10px; font: 12px/1.4 var(--font-sans, system-ui); color: hsl(232 14% 40%); }
+.wb-kanban-menu .wb-kanban-error { color: var(--ui-red, hsl(0 65% 45%)); }
+.wb-menu > button > svg { width: 15px; height: 15px; flex-shrink: 0; }
 .wb-chip { display: inline-flex; align-items: center; gap: 3px; height: 18px; padding: 0 6px; border-radius: 99px; font: 500 10.5px var(--font-sans, system-ui); background: hsl(30 30% 20% / .09); color: hsl(232 20% 28%); }
 .wb-chip.wb-act { background: hsl(${HERMES_HUE} 90% 55% / .3); color: hsl(30 60% 22%); }
 .wb-hand { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 99px; border: 1px solid hsl(30 40% 25% / .25); background: hsl(40 60% 99% / .9); color: ${INK}; font: 600 11px var(--font-sans, system-ui); cursor: pointer; opacity: 0; transform: translateY(3px); transition: opacity .15s, transform .15s; }
@@ -3719,6 +4424,8 @@ function installStyles() {
 const LINE = {
   frame: 'M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 9h8',
   hand: 'M5 12h11M12 6l6 6-6 6',
+  kanban: 'M4 5h4v12H4zM10 5h4v8h-4zM16 5h4v14h-4z',
+  chat: 'M5 6h14v9H11l-4 3.5V15H5z',
   note: 'M5 4h14v11l-5 5H5Z M14 20v-5h5',
   redo: 'M15 7l4 4-4 4M19 11H9a5 5 0 0 0 0 10h2',
   sticker: 'M12 3a9 9 0 1 0 9 9h-6a3 3 0 0 1-3-3Z M15 3.5l5.5 5.5',
@@ -4001,7 +4708,7 @@ function EditableText({ value, onDone, multiline = true, className }) {
 function NoteView({ item, editing, run, k, far }) {
   const tone = TONES[item.tone] || TONES.butter
   const working = run?.state === 'running' || run?.state === 'queued'
-  const meta = !editing && (item.owner || item.due || item.action)
+  const meta = !editing && (item.owner || item.due || item.action || item.kanban || item.asked)
   const lines = Math.max(1, Math.floor((item.h - 30 - (working || (meta && !far) ? 26 : 0)) / (14 * k * 1.34)))
 
   return jsxs('div', {
@@ -4019,7 +4726,9 @@ function NoteView({ item, editing, run, k, far }) {
             children: [
               item.action ? jsx('span', { className: 'wb-chip wb-act', children: item.status === 'delivered' ? 'Done' : 'Action' }, 'a') : null,
               item.owner ? jsx('span', { className: 'wb-chip', children: item.owner }, 'o') : null,
-              item.due ? jsx('span', { className: 'wb-chip', children: item.due }, 'd') : null
+              item.due ? jsx('span', { className: 'wb-chip', children: item.due }, 'd') : null,
+              item.kanban?.id ? jsx(KanbanChip, { mark: item.kanban }, 'k') : null,
+              item.asked && item.status !== 'delivered' ? jsx(AskedChip, { id: item.id }, 'c') : null
             ]
           })
         : null,
@@ -4040,7 +4749,7 @@ function NoteView({ item, editing, run, k, far }) {
           ? jsxs('button', {
               className: `wb-hand${item.action && item.status !== 'delivered' ? ' wb-show' : ''}`,
               'data-nodrag': true,
-              onClick: () => handToHermes(item.id),
+              onClick: () => requestHand([item.id]),
               onPointerDown: event => event.stopPropagation(),
               title: run?.state === 'failed' ? run.error : 'A Hermes agent does this and delivers the result here',
               type: 'button',
@@ -4693,12 +5402,40 @@ function TopBar({ board }) {
   const [menu, setMenu] = useState(null)
   const [renaming, setRenaming] = useState(false)
   const open = openActionCount(board)
+  const kanbanReads = useValue($kanbanReads)
+  const drift = board.fromKanban?.slug ? kanbanDrift(board, kanbanReads[board.fromKanban.slug]) : 0
   const routed = board.items.some(item => item.kind === 'waypoint')
   const close = useCallback(() => setMenu(null), [])
   const pending = board.proposals.reduce((count, proposal) => count + proposal.items.filter(item => item.state === 'pending').length, 0)
   const notes = board.items.filter(item => item.kind === 'note').length
 
   useOutside(Boolean(menu), close)
+
+  // A board a chat made knows the chat's id but not its name. Ask once.
+  useEffect(() => {
+    const chat = board.chat
+
+    if (!chat?.id || chat.title) {
+      return undefined
+    }
+
+    let live = true
+
+    listChats(200)
+      .then(rows => {
+        const row = rows.find(entry => entry.id === chat.id || entry.sid === chat.id)
+        const now = $board.get()
+
+        if (live && row && now.id === board.id && now.chat?.id === chat.id && !now.chat.title) {
+          setBoard({ ...now, chat: { ...now.chat, title: row.title } }, { undo: false })
+        }
+      })
+      .catch(() => undefined)
+
+    return () => {
+      live = false
+    }
+  }, [board.id, board.chat?.id, board.chat?.title])
 
   const run = async (label, work) => {
     setMenu(null)
@@ -4740,6 +5477,70 @@ function TopBar({ board }) {
             type: 'button',
             children: [jsx(Line, { name: 'frame' }), jsx('span', { children: board.name }), jsx(icons.ChevronDown, { size: 14 })]
           }),
+      board.chat?.id
+        ? jsx(Tip, {
+            label: 'This board is linked to a chat',
+            children: jsxs('button', {
+              className: 'wb-btn wb-linked',
+              'data-menu-trigger': true,
+              onClick: () => setMenu(menu === 'chat' ? null : 'chat'),
+              type: 'button',
+              children: [jsx(Line, { name: 'chat' }), jsx('span', { children: clean(board.chat.title, 26) || 'Linked chat' })]
+            })
+          })
+        : null,
+      drift > 0
+        ? jsx(Tip, {
+            label: `${drift} card${drift === 1 ? ' has' : 's have'} moved or been added on the Kanban board ${clean(board.fromKanban.name, 40)}`,
+            children: jsxs('button', {
+              className: 'wb-btn wb-linked wb-drift',
+              onClick: () => void run('refresh from Kanban', async () => {
+                const out = await refreshFromKanban()
+
+                return `${out.added} added and ${out.moved} moved. One undo puts it back.`
+              }),
+              type: 'button',
+              children: [jsx(Line, { name: 'kanban' }), jsx('span', { children: 'Kanban changed · Refresh' })]
+            })
+          })
+        : null,
+      menu === 'chat'
+        ? jsxs('div', {
+            className: 'wb-menu wb-kanban-menu',
+            style: { left: 10, top: 42 },
+            children: [
+              jsx('small', { children: `This board belongs to the work in "${clean(board.chat?.title, 60) || 'a chat'}". Hand to Hermes and Run ask before they start anything separate.` }),
+              jsxs('button', { onClick: () => void run('open that chat', () => openLinkedChat(board.chat.id)), type: 'button', children: [jsx(Line, { name: 'chat' }), 'Open the chat'] }),
+              jsxs('button', { 'data-menu-trigger': true, onClick: () => setMenu('link'), type: 'button', children: [jsx(icons.Pencil, { size: 15 }), 'Link to another chat'] }),
+              jsxs('button', {
+                onClick: () => {
+                  setMenu(null)
+                  unlinkChat()
+                },
+                type: 'button',
+                children: [jsx(icons.X, { size: 15 }), 'Unlink']
+              })
+            ]
+          })
+        : null,
+      menu === 'link'
+        ? jsx(ChatPicker, {
+            close,
+            onPick: chat => {
+              linkChat(chat)
+              $toast.set({ kind: 'success', text: `Linked to "${clean(chat.title, 40)}".` })
+            },
+            style: { left: 10, top: 42 }
+          })
+        : null,
+      menu === 'kanban'
+        ? jsx(KanbanBoards, {
+            close,
+            hint: 'Lay a Kanban board out as a new whiteboard:',
+            onPick: slug => void run('lay out that Kanban board', async () => `${await boardFromKanban(slug)} cards laid out. It is a copy: changes here do not go back to Kanban.`),
+            style: { left: 10, top: 42 }
+          })
+        : null,
       menu === 'boards'
         ? jsxs('div', {
             className: 'wb-menu',
@@ -4765,6 +5566,19 @@ function TopBar({ board }) {
                 ),
               jsx('div', { className: 'wb-sep' }),
               jsxs('button', { onClick: () => run('make a board', () => void createBoard()), type: 'button', children: [jsx(icons.Plus, { size: 15 }), 'New board'] }),
+              jsxs('button', { 'data-menu-trigger': true, onClick: () => setMenu('kanban'), type: 'button', children: [jsx(Line, { name: 'kanban' }), 'New board from Kanban'] }),
+              board.fromKanban?.slug
+                ? jsxs('button', {
+                    onClick: () => void run('refresh from Kanban', async () => {
+                      const out = await refreshFromKanban()
+
+                      return out.added + out.moved > 0 ? `${out.added} added and ${out.moved} moved. One undo puts it back.` : 'Already in line with Kanban.'
+                    }),
+                    type: 'button',
+                    children: [jsx(Line, { name: 'kanban' }), 'Refresh from Kanban']
+                  })
+                : null,
+              board.chat?.id ? null : jsxs('button', { 'data-menu-trigger': true, onClick: () => setMenu('link'), type: 'button', children: [jsx(Line, { name: 'chat' }), 'Link this board to a chat'] }),
               jsxs('button', {
                 onClick: () => {
                   setMenu(null)
@@ -4802,7 +5616,7 @@ function TopBar({ board }) {
         : open > 0
           ? jsx(Tip, {
               label: `Hermes travels the board stop by stop and its agents do the ${open} open action item${open === 1 ? '' : 's'}, each building on the last`,
-              children: jsxs('button', { className: 'wb-btn wb-go', onClick: () => void runPlan(), type: 'button', children: [jsx(Line, { name: 'play' }), routed ? 'Run the route' : 'Run the plan', jsx('span', { className: 'wb-badge', children: String(open) })] })
+              children: jsxs('button', { className: 'wb-btn wb-go', onClick: () => requestRun(), type: 'button', children: [jsx(Line, { name: 'play' }), routed ? 'Run the route' : 'Run the plan', jsx('span', { className: 'wb-badge', children: String(open) })] })
             })
           : null,
       jsx(Tip, {
@@ -4892,8 +5706,184 @@ function TopBar({ board }) {
   })
 }
 
+/** Where a note's Kanban card is now. */
+function KanbanChip({ mark }) {
+  const status = useValue($kanbanLive)[mark.id]
+  const tone = status === 'done' ? ' wb-kanban-done' : status === 'running' || status === 'review' ? ' wb-kanban-running' : status === 'archived' ? ' wb-kanban-gone' : ''
+
+  return jsx('span', {
+    className: `wb-chip wb-kanban${tone}`,
+    title: status === 'archived' ? `Card ${mark.id} is no longer on the Kanban board ${mark.board}. It was archived there.` : `Card ${mark.id} on the Kanban board ${mark.board}${status ? `, checked while this page is open` : ''}`,
+    children: status ? `Kanban · ${status === 'archived' ? 'archived' : kanbanTitle(status)}` : 'On Kanban'
+  })
+}
+
+/** A note that was put to the linked chat, and whether the chat is on it now. */
+function AskedChip({ id }) {
+  const working = useValue($asks).some(ask => ask.state === 'working' && ask.noteIds.includes(id))
+
+  return jsx('span', {
+    className: `wb-chip wb-asked${working ? ' wb-working' : ''}`,
+    title: working ? 'The linked chat is working on this now. Its answer will wait under Suggestions.' : 'This was put to the linked chat. Its answer comes back as a suggestion.',
+    children: working ? 'Chat is working' : 'Asked in chat'
+  })
+}
+
+/** The person's recent chats, to link the board to one. */
+function ChatPicker({ close, onPick, style }) {
+  const [state, setState] = useState({ chats: [], error: '', loading: true })
+
+  useEffect(() => {
+    let live = true
+
+    listChats()
+      .then(chats => live && setState({ chats: chats.slice(0, 30), error: '', loading: false }))
+      .catch(error => live && setState({ chats: [], error: errorText(error), loading: false }))
+
+    return () => {
+      live = false
+    }
+  }, [])
+
+  return jsxs('div', {
+    className: 'wb-menu wb-kanban-menu wb-chat-menu',
+    style,
+    children: [
+      jsx('small', { children: 'Link this board to the chat its work is happening in:' }),
+      state.loading ? jsx('small', { children: 'Asking Hermes for your chats...' }) : null,
+      state.error ? jsx('small', { className: 'wb-kanban-error', children: state.error }) : null,
+      !state.loading && !state.error && state.chats.length === 0 ? jsx('small', { children: 'No chats in this Hermes profile yet.' }) : null,
+      ...state.chats.map(chat =>
+        jsxs(
+          'button',
+          {
+            onClick: () => {
+              close()
+              onPick(chat)
+            },
+            type: 'button',
+            children: [jsx(Line, { name: 'chat' }), jsx('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: chat.title })]
+          },
+          chat.id
+        )
+      )
+    ]
+  })
+}
+
+/** On a linked board, where the work goes: to the chat that owns it, or started
+ *  separately from the board. Nothing starts until one is picked. */
+function Handoff() {
+  const pending = useValue($handoff)
+  const board = useValue($board)
+
+  if (!pending) {
+    return null
+  }
+
+  const count = pending.noteIds.length
+  const chat = clean(board.chat?.title, 50) || 'the linked chat'
+  const what = pending.plan ? `the ${count} open item${count === 1 ? '' : 's'} of this plan` : count === 1 ? 'this note' : `these ${count} notes`
+  const done = () => $handoff.set(null)
+
+  return jsx('div', {
+    className: 'wb-handoff',
+    onPointerDown: event => event.target === event.currentTarget && done(),
+    children: jsxs('div', {
+      className: 'wb-handoff-card',
+      role: 'dialog',
+      children: [
+        jsx('b', { children: 'This board is linked to a chat' }),
+        jsx('p', { children: `"${chat}" already owns this work. Where should ${what} go?` }),
+        jsxs('button', {
+          className: 'wb-btn wb-solid',
+          disabled: count === 0 || !board.chat?.id,
+          onClick: () => {
+            done()
+            askLinkedChat(pending.noteIds).then(
+              how => host.notify?.({ kind: 'success', message: how === 'seated' ? 'The request is in the message box. Press Enter to send it.' : 'The request is copied. Paste it into the chat.', title: 'Whiteboard' }),
+              error => $toast.set({ kind: 'error', text: errorText(error) })
+            )
+          },
+          type: 'button',
+          children: [jsx(Line, { name: 'chat' }), 'Ask in the linked chat']
+        }),
+        jsx('small', { children: 'Opens the chat with the request written out. You send it, and the chat keeps its own approvals.' }),
+        jsxs('button', {
+          className: 'wb-btn',
+          onClick: () => {
+            done()
+
+            if (pending.plan) {
+              void runPlan()
+            } else {
+              pending.noteIds.forEach(id => handToHermes(id))
+            }
+          },
+          type: 'button',
+          children: [jsx(Line, { name: 'hand' }), 'Start separate work here']
+        }),
+        jsx('small', { children: 'New Hermes agents do it from the board. The chat is not told.' }),
+        jsx('button', { className: 'wb-btn wb-handoff-cancel', onClick: done, type: 'button', children: 'Cancel' })
+      ]
+    })
+  })
+}
+
+/** The Kanban boards to pick from. They are asked for when the menu opens. */
+function KanbanBoards({ close, hint, onPick, style, withStart }) {
+  const [state, setState] = useState({ boards: [], current: '', error: '', loading: true })
+  const [start, setStart] = useState(false)
+
+  useEffect(() => {
+    let live = true
+
+    kanbanRest('/kanban/boards')
+      .then(answer => live && setState({ boards: Array.isArray(answer.boards) ? answer.boards : [], current: String(answer.current || ''), error: '', loading: false }))
+      .catch(error => live && setState({ boards: [], current: '', error: errorText(error), loading: false }))
+
+    return () => {
+      live = false
+    }
+  }, [])
+
+  return jsxs('div', {
+    className: 'wb-menu wb-kanban-menu',
+    style,
+    children: [
+      jsx('small', { children: hint }),
+      state.loading ? jsx('small', { children: 'Asking Kanban for its boards...' }) : null,
+      state.error ? jsx('small', { className: 'wb-kanban-error', children: state.error }) : null,
+      ...state.boards.map(entry =>
+        jsxs(
+          'button',
+          {
+            onClick: () => {
+              close()
+              onPick(entry.slug, entry.name, start)
+            },
+            type: 'button',
+            children: [jsx(Line, { name: 'kanban' }), jsx('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: entry.name }), entry.slug === state.current ? jsx('span', { style: T.quaternary, children: 'open' }) : null]
+          },
+          entry.slug
+        )
+      ),
+      withStart && state.boards.length > 0
+        ? jsxs('label', {
+            className: 'wb-kanban-start',
+            children: [
+              jsx('input', { checked: start, onChange: event => setStart(event.target.checked), type: 'checkbox' }),
+              jsxs('span', { children: ['Let Hermes start on them', jsx('small', { children: start ? 'They go to Triage. Hermes splits each into tasks and its agents begin, on your model.' : 'Off: they are parked in Blocked and nothing runs until you unblock them.' })] })
+            ]
+          })
+        : null
+    ]
+  })
+}
+
 function Toolbar() {
   const t = usePluginI18n('whiteboard')
+  const [kanban, setKanban] = useState(false)
   const selection = useValue($selection)
   const board = useValue($board)
   const active = useValue($tool)
@@ -4906,6 +5896,18 @@ function Toolbar() {
   const arrows = board.links.some(link => link.kind === 'arrow' && (picked.has(link.from) || picked.has(link.to)))
 
   useOutside(stickers, close)
+  useOutside(kanban, () => setKanban(false))
+
+  const toKanban = async (slug, name, start) => {
+    try {
+      const count = await sendToKanban(notes.map(note => note.id), slug, start)
+      const cards = `${count} ${count === 1 ? 'card' : 'cards'}`
+
+      $toast.set({ kind: 'success', text: start ? `${cards} in Triage on ${clean(name, 40)}. Hermes will split them into tasks and start working.` : `${cards} parked in Blocked on ${clean(name, 40)}. Nothing runs until you unblock them there.` })
+    } catch (error) {
+      $toast.set({ kind: 'error', text: errorText(error) })
+    }
+  }
 
   const place = item => {
     const center = viewCenter()
@@ -5005,7 +6007,20 @@ function Toolbar() {
         : []),
       selection.length > 0 ? jsx('div', { className: 'wb-sep' }) : null,
       notes.length > 0 ? tool(notes.every(note => note.action) ? t('tool.notAction') : t('tool.makeAction'), jsx(Line, { name: 'bolt' }), () => toggleAction(selection), notes.every(note => note.action)) : null,
-      notes.length > 0 ? tool(t('tool.hand'), jsx(Line, { name: 'hand' }), () => notes.forEach(note => handToHermes(note.id))) : null,
+      notes.length > 0 ? tool(t('tool.hand'), jsx(Line, { name: 'hand' }), () => requestHand(notes.map(note => note.id))) : null,
+      notes.length > 0
+        ? jsx(
+            'div',
+            {
+              style: { position: 'relative' },
+              children: [
+                jsx('span', { 'data-menu-trigger': true, children: tool('Send to Kanban', jsx(Line, { name: 'kanban' }), () => setKanban(!kanban), kanban) }, 't'),
+                kanban ? jsx(KanbanBoards, { close: () => setKanban(false), hint: `Make ${notes.length === 1 ? 'a card' : `${notes.length} cards`} on:`, onPick: toKanban, withStart: true, style: { bottom: 0, left: 46 } }, 'm') : null
+              ]
+            },
+            'kanban'
+          )
+        : null,
       selection.length > 0 ? tool(t('tool.duplicate'), jsx(icons.Copy, { size: 15 }), duplicateSelection) : null,
       arrows ? tool(t('tool.unlink'), jsx(Line, { name: 'unlink' }), () => removeArrows(selection)) : null,
       selection.length > 0 ? tool(t('tool.delete'), jsx(icons.Trash2, { size: 15 }), () => removeItems(selection)) : null
@@ -5357,6 +6372,38 @@ function WhiteboardPage() {
 
   useShortcuts()
 
+  // While the page is open, ask Kanban now and then where this board's cards are.
+  const onKanban = Boolean(board.fromKanban?.slug) || board.items.some(item => item.kanban?.id)
+
+  useEffect(() => {
+    if (!onKanban) {
+      return undefined
+    }
+
+    let stopped = false
+    let timer = null
+    const tick = async () => {
+      if (stopped) {
+        return
+      }
+
+      if (typeof document === 'undefined' || !document.hidden) {
+        await refreshKanbanStatus().catch(() => undefined)
+      }
+
+      if (!stopped) {
+        timer = setTimeout(() => void tick(), KANBAN_POLL_MS)
+      }
+    }
+
+    timer = setTimeout(() => void tick(), 400)
+
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+    }
+  }, [board.id, onKanban])
+
   // A board opened for the first time centres itself.
   useEffect(() => {
     const view = $board.get().view
@@ -5385,6 +6432,7 @@ function WhiteboardPage() {
           jsx(ZoomBar, { board }),
           jsx(Compose, {}),
           panel ? jsx(Panel, { board }) : null,
+          jsx(Handoff, {}),
           jsx(Toast, {})
         ]
       })
@@ -5425,6 +6473,8 @@ export default {
       pluginRest = (path, options) => ctx.rest(path, options)
       ctx.onDispose(watchChats())
     }
+
+    ctx.onDispose(watchLinkedChat())
 
     ctx.onDispose(() => {
       stopCompose()

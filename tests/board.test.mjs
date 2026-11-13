@@ -22,7 +22,10 @@ function load(options = {}) {
         overlaps, parseBoardSpec, parseRunReply, rectOf, redo, removeItems, sectionsOf, setBoard, sharedBoardCopy, takeBack,
         takeBackReceipt, takeBackState, tidyProposal, undo, chatProposal, suiteListen, takeSuiteNotes,
         $models, $modelOptions, cleanModelChoice, loadModelOptions, runSession, setModelChoice,
-        $chatBridge, backendKey, finalAssistantText, profileRequest, recoverReply, setChatSharing, syncChats
+        $chatBridge, backendKey, finalAssistantText, profileRequest, recoverReply, setChatSharing, syncChats,
+        boardFromKanban, kanbanCardOf, kanbanSpec, sendToKanban,
+        $handoff, $runs, askLinkedChat, chatRequest, linkChat, listChats, requestHand, requestRun, seatInChat, takeChatEntry, unlinkChat,
+        $asks, $kanbanLive, $kanbanReads, $panel, chatEvent, finishAsk, followAsk, kanbanDrift, refreshFromKanban, refreshKanbanStatus, syncFromKanban, watchLinkedChat
       }
     `)
   const atom = initial => {
@@ -40,7 +43,7 @@ function load(options = {}) {
     jsxs: () => null,
     Math,
     Object,
-    setTimeout: () => 1,
+    setTimeout: options.setTimeout || (() => 1),
     __os: options.os,
     __rest: options.rest,
     __storage: options.storage
@@ -1205,4 +1208,627 @@ test('a completion that carries its text is used as it is, with no transcript re
   const failed = turnGateway({ complete: { status: 'error', text: '' }, history: [] })
 
   await assert.rejects((host => { const wb = load({ host, storage: memoryStorage() }); wb.hydrate(memoryStorage()); return wb })(failed.host).runSession({ maxMs: 1000, maxSteps: 4, text: 'do it', title: 'T' }), /ended as error/)
+})
+
+// ---------------------------------------------------------------- Hermes Kanban
+/** A stand-in for the plugin's backend routes that reach Kanban. */
+function kanbanBackend(options = {}) {
+  const calls = []
+  const rest = async (path, request = {}) => {
+    calls.push([path, request.method || 'GET', request.body ? JSON.parse(JSON.stringify(request.body)) : null])
+
+    if (options.down) {
+      throw new Error('404')
+    }
+
+    if (path === '/kanban/cards') {
+      return options.refuse ? { error: options.refuse, ok: false } : { board: request.body.board, cards: request.body.cards.map((card, index) => ({ id: `t_${index + 1}`, key: card.key, title: card.title })), ok: true }
+    }
+
+    if (path.startsWith('/kanban/board/')) {
+      return options.read ?? { board: 'launch', columns: [{ cards: [{ id: 't_1', title: 'Book the venue' }, { id: 't_2', title: 'Order flyers' }], status: 'todo' }, { cards: [{ id: 't_3', title: 'Pick a date' }], status: 'done' }], name: 'Launch plan', ok: true }
+    }
+
+    return {}
+  }
+
+  return { calls, rest }
+}
+
+test('a note becomes a Kanban card with its first line as the title and what the board knows below', () => {
+  const wb = load({ storage: memoryStorage() })
+
+  wb.hydrate(memoryStorage())
+
+  const note = wb.makeNote({ due: 'Friday', owner: 'Sam', text: 'Call the venue\nAsk about the Saturday rate and parking' })
+  const board = { ...wb.$board.get(), items: [note, { for: note.id, headline: 'Venue is free on the 14th', id: 'r1', kind: 'result', x: 0, y: 0 }], name: 'Launch' }
+  const card = wb.kanbanCardOf(board, note)
+
+  assert.equal(card.title, 'Call the venue')
+  assert.equal(card.key, `${board.id}:${note.id}`)
+  assert.equal(card.body, 'Call the venue\nAsk about the Saturday rate and parking\n\nOwner: Sam\nDue: Friday\nResult on the board: Venue is free on the 14th\n\nFrom the Whiteboard board "Launch".')
+})
+
+test('Send to Kanban makes one card per picked note, marks the notes, and one undo takes the marks off', async () => {
+  const backend = kanbanBackend()
+  const storage = memoryStorage()
+  const wb = load({ rest: backend.rest, storage })
+
+  wb.hydrate(storage)
+
+  const first = wb.makeNote({ text: 'Book the venue', x: 0, y: 0 })
+  const second = wb.makeNote({ text: 'Order flyers', x: 300, y: 0 })
+  const blank = wb.makeNote({ text: '   ', x: 600, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), items: [first, second, blank] })
+  assert.equal(await wb.sendToKanban([first.id, second.id, blank.id, 'missing'], 'launch'), 2)
+
+  const sent = backend.calls.find(([path]) => path === '/kanban/cards')
+
+  assert.equal(sent[1], 'POST')
+  assert.equal(sent[2].board, 'launch')
+  // Parked unless asked: the page only asks Hermes to start on a real true.
+  assert.equal(sent[2].start, false)
+  assert.deepEqual(sent[2].cards.map(card => card.title), ['Book the venue', 'Order flyers'])
+
+  const items = wb.$board.get().items
+
+  assert.deepEqual(JSON.parse(JSON.stringify(items.find(item => item.id === first.id).kanban)), { board: 'launch', id: 't_1' })
+  assert.deepEqual(JSON.parse(JSON.stringify(items.find(item => item.id === second.id).kanban)), { board: 'launch', id: 't_2' })
+  assert.equal(items.find(item => item.id === blank.id).kanban, undefined)
+  wb.undo()
+  assert.equal(wb.$board.get().items.some(item => item.kanban), false)
+})
+
+test('Send to Kanban says why when it cannot, and marks nothing', async () => {
+  const storage = memoryStorage()
+  const refused = load({ rest: kanbanBackend({ refuse: 'That Kanban board does not exist any more.' }).rest, storage })
+
+  refused.hydrate(storage)
+
+  const note = refused.makeNote({ text: 'Book the venue', x: 0, y: 0 })
+
+  refused.setBoard({ ...refused.$board.get(), items: [note] })
+  await assert.rejects(refused.sendToKanban([note.id], 'gone'), /does not exist any more/)
+  await assert.rejects(refused.sendToKanban([], 'launch'), /Pick a note with some text/)
+  assert.equal(refused.$board.get().items[0].kanban, undefined)
+
+  const down = load({ rest: kanbanBackend({ down: true }).rest, storage: memoryStorage() })
+
+  down.hydrate(memoryStorage())
+  down.setBoard({ ...down.$board.get(), items: [note] })
+  await assert.rejects(down.sendToKanban([note.id], 'launch'), /backend isn't running in this Hermes profile/)
+
+  // The backend runs but does not know the Kanban routes yet: it is the version from before an update.
+  const older = load({ rest: async path => (path === '/inbox' ? { entries: [] } : Promise.reject(new Error('404'))), storage: memoryStorage() })
+
+  older.hydrate(memoryStorage())
+  older.setBoard({ ...older.$board.get(), items: [note] })
+  await assert.rejects(older.sendToKanban([note.id], 'launch'), /still the older version.*Restart the Hermes gateway/)
+
+  const many = Array.from({ length: 25 }, (_, index) => refused.makeNote({ text: `Note ${index}`, x: index, y: 0 }))
+
+  refused.setBoard({ ...refused.$board.get(), items: many })
+  await assert.rejects(refused.sendToKanban(many.map(item => item.id), 'launch'), /at most 24 notes/)
+})
+
+test('a Kanban board lays out as a new whiteboard with one column per status', async () => {
+  const backend = kanbanBackend()
+  const storage = memoryStorage()
+  const wb = load({ rest: backend.rest, storage })
+
+  wb.hydrate(storage)
+
+  const before = wb.$index.get().boards.length
+  const spec = wb.kanbanSpec({ columns: [{ cards: [{ title: 'Book the venue' }, { title: '' }], status: 'todo' }, { cards: [], status: 'done' }, { cards: [{ title: 'Ship it' }], status: 'review' }], name: 'Launch plan' })
+
+  assert.equal(spec.layout, 'columns')
+  assert.equal(spec.title, 'Launch plan, from Kanban')
+  assert.deepEqual(Array.from(spec.sections, section => section.title), ['To do', 'Review'])
+  assert.equal(wb.kanbanSpec({ columns: [], name: 'Empty' }), null)
+  // One status only still makes a board: the next status stands beside it, empty.
+  assert.deepEqual(Array.from(wb.kanbanSpec({ columns: [{ cards: [{ title: 'Book the venue' }], status: 'triage' }], name: 'Launch plan' }).sections, section => [section.title, section.notes.length]), [['Triage', 1], ['To do', 0]])
+  assert.deepEqual(Array.from(wb.kanbanSpec({ columns: [{ cards: [{ title: 'Shipped' }], status: 'done' }], name: 'Launch plan' }).sections, section => section.title), ['Review', 'Done'])
+
+  assert.equal(await wb.boardFromKanban('launch'), 3)
+  assert.equal(wb.$index.get().boards.length, before + 1)
+  assert.equal(wb.$board.get().name, 'Launch plan, from Kanban')
+  assert.equal(wb.$board.get().items.filter(item => item.kind === 'note').length, 3)
+  // Reading is all it does: nothing is sent back to Kanban.
+  assert.deepEqual(backend.calls.map(([path, method]) => `${method} ${path}`), ['GET /kanban/board/launch'])
+
+  const empty = load({ rest: kanbanBackend({ read: { board: 'launch', columns: [], name: 'Launch plan', ok: true } }).rest, storage: memoryStorage() })
+
+  empty.hydrate(memoryStorage())
+  await assert.rejects(empty.boardFromKanban('launch'), /no cards to lay out/)
+})
+
+// ---------------------------------------------------------------- a board linked to a chat
+test('a board a chat made is linked to that chat, and linking is one undo', () => {
+  const storage = memoryStorage()
+  const wb = load({ storage })
+
+  wb.hydrate(storage)
+
+  const sections = [{ notes: [{ action: true, text: 'Book the venue' }], title: 'Plan' }, { notes: [{ text: 'Tell people' }], title: 'Ship' }]
+
+  assert.equal(wb.takeChatEntry({ chat: '20261113_101500_ab12cd', kind: 'board', layout: 'route', name: 'Launch', sections }), 'taken')
+  assert.equal(wb.takeChatEntry({ kind: 'board', layout: 'route', name: 'Loose', sections }), 'taken')
+  assert.equal(wb.takeChatEntry({ chat: { id: 'x' }, kind: 'board', layout: 'route', name: 'Odd', sections }), 'taken')
+
+  const stored = name => [...storage.values.values()].find(value => value?.name === name && Array.isArray(value.items))
+
+  assert.deepEqual(JSON.parse(JSON.stringify(stored('Launch').chat)), { id: '20261113_101500_ab12cd' })
+  assert.equal(stored('Loose').chat, undefined)
+  assert.equal(stored('Odd').chat, undefined)
+
+  assert.equal(wb.linkChat({ id: '', title: 'Nothing' }), false)
+  assert.equal(wb.linkChat({ id: 's_77', title: '  Venue   planning ' }), true)
+  assert.deepEqual(JSON.parse(JSON.stringify(wb.$board.get().chat)), { id: 's_77', title: 'Venue planning' })
+  wb.unlinkChat()
+  assert.equal('chat' in wb.$board.get(), false)
+  wb.undo()
+  assert.equal(wb.$board.get().chat.id, 's_77')
+})
+
+test('the request for the linked chat names the board and the items, and asks for no repeat work', () => {
+  const wb = load({ storage: memoryStorage() })
+
+  wb.hydrate(memoryStorage())
+
+  const board = { ...wb.$board.get(), name: 'Launch' }
+  const one = wb.chatRequest(board, [wb.makeNote({ due: 'Friday', owner: 'Sam', text: 'Book the\nvenue' })], false)
+
+  assert.match(one, /^From the Whiteboard board "Launch", which is linked to this chat\./)
+  assert.match(one, /Please do this item from the board:\n\n- Book the venue \(owner: Sam\) \(due: Friday\)/)
+  assert.match(one, /already done or under way, say so instead of doing it again/)
+  // With chat access off the chat cannot write to the board, so it is not asked to.
+  assert.doesNotMatch(one, /whiteboard_propose/)
+
+  const two = wb.chatRequest(board, [wb.makeNote({ text: 'A' }), wb.makeNote({ text: 'B' })], true)
+
+  assert.match(two, /Please do these 2 items from the board, in this order:\n\n- A\n- B/)
+  assert.match(two, /whiteboard_propose \(board "Launch", "results"/)
+})
+
+test('on a linked board Hand to Hermes and Run ask first and start nothing', async () => {
+  const requests = []
+  const storage = memoryStorage()
+  const wb = load({ host: { request: async (method, params) => (requests.push([method, params]), {}) }, storage })
+
+  wb.hydrate(storage)
+
+  const note = wb.makeNote({ action: true, text: 'Book the venue', x: 0, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), chat: { id: 's_77', title: 'Venue planning' }, items: [note] })
+  wb.requestHand([note.id])
+  assert.deepEqual(JSON.parse(JSON.stringify(wb.$handoff.get())), { noteIds: [note.id] })
+  wb.$handoff.set(null)
+  wb.requestRun()
+  assert.deepEqual(JSON.parse(JSON.stringify(wb.$handoff.get())), { noteIds: [note.id], plan: true })
+  await new Promise(resolve => setTimeout(resolve, 20))
+  // No session was created and nothing was submitted anywhere.
+  assert.deepEqual(requests.filter(([method]) => method === 'session.create' || method === 'prompt.submit'), [])
+  assert.equal(wb.$runs.get()[note.id], undefined)
+})
+
+test('asking the linked chat opens it, seats the request in its message box and marks the notes', async () => {
+  const seen = []
+  const storage = memoryStorage()
+  const wb = load({
+    host: {
+      composer: { focus: id => seen.push(['focus', id]), insertText: async (id, text, options) => (seen.push(['insert', id, text, options]), seen.filter(([what]) => what === 'insert').length >= 2), submit: () => seen.push(['submit']) },
+      openSession: async id => seen.push(['open', id]),
+      request: async (method, params) => (seen.push(['request', method, params]), {})
+    },
+    setTimeout: run => (run(), 1),
+    storage
+  })
+
+  wb.hydrate(storage)
+
+  const note = wb.makeNote({ action: true, text: 'Book the venue', x: 0, y: 0 })
+  const blank = wb.makeNote({ text: ' ', x: 300, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), items: [note, blank], name: 'Launch' })
+  await assert.rejects(wb.askLinkedChat([note.id]), /not linked to a chat/)
+  wb.setBoard({ ...wb.$board.get(), chat: { id: 's_77' } })
+  await assert.rejects(wb.askLinkedChat([blank.id]), /Pick a note with some text/)
+  assert.equal(await wb.askLinkedChat([note.id, blank.id]), 'seated')
+
+  assert.deepEqual(seen[0], ['open', 's_77'])
+
+  const inserts = seen.filter(([what]) => what === 'insert')
+
+  // The message box was not there on the first try, so it was tried again.
+  assert.equal(inserts.length, 2)
+  assert.equal(inserts[1][1], 's_77')
+  assert.match(inserts[1][2], /- Book the venue/)
+  assert.deepEqual(JSON.parse(JSON.stringify(inserts[1][3])), { mode: 'block' })
+  // The page never sends for the person, and never talks to the session itself.
+  assert.equal(seen.some(([what]) => what === 'submit'), false)
+  assert.equal(seen.some(([what, method]) => what === 'request' && /prompt|session\.create/.test(method)), false)
+
+  const items = wb.$board.get().items
+
+  assert.equal(typeof items.find(item => item.id === note.id).asked, 'number')
+  assert.equal(items.find(item => item.id === blank.id).asked, undefined)
+})
+
+test('when the message box never takes the request it is copied instead, or the failure is said', async () => {
+  const copied = []
+  const host = { composer: { insertText: async () => false }, openSession: async () => undefined }
+  const quick = run => (run(), 1)
+  const withClipboard = load({ host, os: { writeClipboard: async text => (copied.push(text), true) }, setTimeout: quick, storage: memoryStorage() })
+
+  assert.equal(await withClipboard.seatInChat('s_77', 'Do the thing', 2), 'copied')
+  assert.deepEqual(copied, ['Do the thing'])
+
+  const without = load({ host, setTimeout: quick, storage: memoryStorage() })
+
+  await assert.rejects(without.seatInChat('s_77', 'Do the thing', 2), /did not take the request/)
+
+  const old = load({ host: { composer: host.composer }, setTimeout: quick, storage: memoryStorage() })
+
+  await assert.rejects(old.seatInChat('s_77', 'Do the thing', 2), /Update Hermes Desktop/)
+})
+
+test('a result the chat reports becomes a card beside its note, and can be taken back', () => {
+  const storage = memoryStorage()
+  const wb = load({ storage })
+
+  wb.hydrate(storage)
+
+  const note = wb.makeNote({ action: true, text: 'Book the venue', x: 0, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), items: [note] })
+
+  const proposal = wb.chatProposal({ results: [{ headline: 'Venue booked', note: note.id, noteText: 'Book the venue', reason: 'Asked from the board', text: 'The Old Mill is held for the 14th.' }, { note: 'gone', text: 'Lost' }, { note: note.id, text: '  ' }], summary: 'Done in chat' })
+
+  assert.equal(proposal.items.length, 2)
+  assert.equal(proposal.items[0].kind, 'result')
+  wb.setBoard({ ...wb.$board.get(), proposals: [proposal] })
+
+  const receipt = wb.decideProposal(proposal.id, proposal.items[0].id, true)
+  const board = wb.$board.get()
+  const card = board.items.find(item => item.kind === 'result')
+
+  assert.equal(card.for, note.id)
+  assert.equal(card.title, 'Venue booked')
+  assert.equal(card.text, 'The Old Mill is held for the 14th.')
+  assert.equal(card.stamp, 'From chat')
+  assert.equal(board.items.find(item => item.id === note.id).status, 'delivered')
+  assert.equal(board.links.some(link => link.kind === 'result' && link.from === note.id && link.to === card.id), true)
+  assert.equal(wb.overlaps(wb.rectOf(card), wb.rectOf(board.items.find(item => item.id === note.id))), false)
+
+  // A result for a note that is gone is refused, not dropped on the board.
+  assert.equal(wb.decideProposal(proposal.id, proposal.items[1].id, true), null)
+  assert.equal(wb.$board.get().proposals[0].items[1].state, 'stale')
+
+  assert.equal(wb.takeBack(receipt.id), true)
+  assert.equal(wb.$board.get().items.some(item => item.kind === 'result'), false)
+  assert.notEqual(wb.$board.get().items.find(item => item.id === note.id).status, 'delivered')
+})
+
+test('the chats to link to come from Hermes, open and stored, newest first, each once', async () => {
+  const asked = []
+  const wb = load({
+    host: {
+      request: async (method, params) => {
+        asked.push([method, JSON.parse(JSON.stringify(params))])
+
+        if (method !== 'session.list') {
+          return {}
+        }
+
+        return params.scope === 'stored'
+          ? { scope: 'stored', sessions: [{ id: 's_1', started_at: 30, title: 'Venue planning' }, { id: 's_2', preview: 'what about parking', started_at: 10, title: '' }, { id: '', title: 'broken' }, null, { id: 's_3', started_at: 20 }] }
+          : { scope: 'live', sessions: [{ id: 's_1', session_id: 'live_1', started_at: 30, title: 'Venue planning' }] }
+      }
+    },
+    storage: memoryStorage()
+  })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(await wb.listChats())), [{ id: 's_1', sid: 'live_1', title: 'Venue planning' }, { id: 's_3', title: 'Untitled chat' }, { id: 's_2', title: 'what about parking' }])
+  assert.deepEqual(asked, [['session.list', { limit: 40 }], ['session.list', { limit: 40, scope: 'stored' }]])
+
+  // A Hermes that refuses the stored list still gives the chats it has.
+  const old = load({ host: { request: async (method, params) => (params?.scope ? Promise.reject(new Error('invalid_params')) : { sessions: [{ id: 's_9', title: 'Only one' }] }) }, storage: memoryStorage() })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(await old.listChats())), [{ id: 's_9', title: 'Only one' }])
+})
+
+// ---------------------------------------------------------------- Kanban, kept in step
+const plain = value => JSON.parse(JSON.stringify(value))
+
+test('a board from Kanban holds every card, each note remembering its card', async () => {
+  const cards = Array.from({ length: 7 }, (_, index) => ({ id: `t_${index + 1}`, title: `Task ${index + 1}` }))
+  const backend = kanbanBackend({ read: { board: 'launch', columns: [{ cards, status: 'todo' }, { cards: [{ id: 't_9', title: 'Shipped' }], status: 'done' }], name: 'Launch plan', ok: true } })
+  const storage = memoryStorage()
+  const wb = load({ rest: backend.rest, storage })
+
+  wb.hydrate(storage)
+  // Seven in one column: more than a laid-out section holds, and none is dropped.
+  assert.equal(await wb.boardFromKanban('launch'), 8)
+
+  const board = wb.$board.get()
+  const notes = board.items.filter(item => item.kind === 'note')
+
+  assert.deepEqual(plain(board.fromKanban), { name: 'Launch plan', slug: 'launch' })
+  assert.deepEqual(plain(notes.map(note => note.kanban.id)).sort(), ['t_1', 't_2', 't_3', 't_4', 't_5', 't_6', 't_7', 't_9'])
+  assert.equal(notes.every(note => note.kanban.board === 'launch'), true)
+
+  const todo = board.items.find(item => item.kind === 'frame' && item.title === 'To do')
+
+  assert.equal(notes.filter(note => note.frame === todo.id).length, 7)
+
+  for (const a of notes) {
+    assert.equal(wb.inside(wb.rectOf(a), wb.rectOf(board.items.find(item => item.id === a.frame))), true, `${a.text} sits in its column`)
+
+    for (const b of notes) {
+      if (a !== b) {
+        assert.equal(wb.overlaps(wb.rectOf(a), wb.rectOf(b)), false, `${a.text} overlaps ${b.text}`)
+      }
+    }
+  }
+
+  assert.equal(wb.kanbanDrift(board, backend.calls.length ? wb.$kanbanReads.get().launch : null), 0)
+})
+
+test('Refresh from Kanban moves notes to their card\'s new status and adds new cards, in one undo', async () => {
+  const state = { read: { board: 'launch', columns: [{ cards: [{ id: 't_1', title: 'Book the venue' }, { id: 't_2', title: 'Order flyers' }], status: 'todo' }, { cards: [{ id: 't_3', title: 'Pick a date' }], status: 'done' }], name: 'Launch plan', ok: true } }
+  const calls = []
+  const storage = memoryStorage()
+  const wb = load({ rest: async (path, request = {}) => (calls.push(`${request.method || 'GET'} ${path}`), state.read), storage })
+
+  wb.hydrate(storage)
+  await wb.boardFromKanban('launch')
+
+  // In Kanban: one card starts running, one is archived, a new one appears.
+  state.read = { board: 'launch', columns: [{ cards: [{ id: 't_2', title: 'Order flyers' }, { id: 't_4', title: 'Rent a van' }], status: 'todo' }, { cards: [{ id: 't_1', title: 'Book the venue' }], status: 'running' }], name: 'Launch plan', ok: true }
+  assert.equal(wb.kanbanDrift(wb.$board.get(), state.read), 2)
+
+  const before = wb.$board.get()
+
+  assert.deepEqual(plain(await wb.refreshFromKanban()), { added: 1, moved: 1 })
+
+  const board = wb.$board.get()
+  const frameOf = text => board.items.find(item => item.id === board.items.find(note => note.text === text).frame).title
+
+  assert.equal(frameOf('Book the venue'), 'Running')
+  assert.equal(frameOf('Rent a van'), 'To do')
+  assert.equal(frameOf('Order flyers'), 'To do')
+  // The archived card's note stays where it was: the person decides what to do with it.
+  assert.equal(frameOf('Pick a date'), 'Done')
+  assert.equal(wb.kanbanDrift(board, state.read), 0)
+
+  const notes = board.items.filter(item => item.kind === 'note')
+
+  for (const a of notes) {
+    for (const b of notes) {
+      if (a !== b) {
+        assert.equal(wb.overlaps(wb.rectOf(a), wb.rectOf(b)), false, `${a.text} overlaps ${b.text}`)
+      }
+    }
+  }
+
+  // Reading is all any of it did.
+  assert.equal(calls.every(call => call.startsWith('GET /kanban/board/')), true)
+  assert.deepEqual(plain(await wb.refreshFromKanban()), { added: 0, moved: 0 })
+  wb.undo()
+  assert.equal(wb.$board.get().items.length, before.items.length)
+
+  wb.setBoard({ ...wb.$board.get(), fromKanban: undefined })
+  await assert.rejects(wb.refreshFromKanban(), /not made from Kanban/)
+})
+
+test('a note shows where its Kanban card is now, and a card that is gone reads as archived', async () => {
+  const backend = kanbanBackend({ read: { board: 'launch', columns: [{ cards: [{ id: 't_1', title: 'Book the venue' }], status: 'running' }], name: 'Launch plan', ok: true } })
+  const storage = memoryStorage()
+  const wb = load({ rest: backend.rest, storage })
+
+  wb.hydrate(storage)
+  assert.equal(await wb.refreshKanbanStatus(), null)
+
+  const first = wb.makeNote({ text: 'Book the venue', x: 0, y: 0 })
+  const second = wb.makeNote({ text: 'Order flyers', x: 300, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), items: [first, second] })
+  await wb.sendToKanban([first.id, second.id], 'launch')
+  // Straight after sending they are where they were put.
+  assert.deepEqual(plain(wb.$kanbanLive.get()), { t_1: 'blocked', t_2: 'blocked' })
+
+  const marks = plain(wb.$board.get().items.map(item => item.kanban))
+
+  await wb.refreshKanbanStatus()
+  assert.deepEqual(plain(wb.$kanbanLive.get()), { t_1: 'running', t_2: 'archived' })
+  // The status is not written into the board: no undo step, nothing to save or share.
+  assert.deepEqual(plain(wb.$board.get().items.map(item => item.kanban)), marks)
+
+  const down = load({ rest: kanbanBackend({ down: true }).rest, storage: memoryStorage() })
+
+  down.hydrate(memoryStorage())
+  down.setBoard({ ...down.$board.get(), items: [{ ...first, kanban: { board: 'launch', id: 't_1' } }] })
+  assert.deepEqual(plain(await down.refreshKanbanStatus()), {})
+})
+
+// ---------------------------------------------------------------- following the linked chat
+function chatHost(options = {}) {
+  const listeners = new Map()
+  const requests = []
+  const notices = []
+
+  return {
+    emit: (type, event) => (listeners.get(type) || []).forEach(listener => listener(event)),
+    host: {
+      composer: { insertText: async () => true },
+      notify: notice => notices.push(notice),
+      onEvent: (type, listener) => {
+        listeners.set(type, [...(listeners.get(type) || []), listener])
+
+        return () => listeners.set(type, (listeners.get(type) || []).filter(entry => entry !== listener))
+      },
+      openSession: async () => undefined,
+      request: async (method, params) => {
+        requests.push([method, plain(params ?? null)])
+
+        if (method === 'session.list') {
+          return { sessions: [{ id: 's_77', session_id: 'live_77', title: 'Venue planning' }, { id: 's_other', session_id: 'live_other', title: 'Something else' }] }
+        }
+
+        if (method === 'session.history') {
+          return { messages: options.history ? options.history() : [] }
+        }
+
+        return {}
+      }
+    },
+    listeners,
+    notices,
+    requests
+  }
+}
+
+const settle = () => new Promise(resolve => setTimeout(resolve, 15))
+
+async function linkedBoard(chat, extra = {}) {
+  const storage = memoryStorage()
+  const wb = load({ host: chat.host, storage, ...extra })
+
+  wb.hydrate(storage)
+
+  const note = wb.makeNote({ action: true, text: 'Book the venue', x: 0, y: 0 })
+  const other = wb.makeNote({ action: true, text: 'Order flyers', x: 300, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), chat: { id: 's_77' }, items: [note, other], name: 'Launch' })
+
+  const stop = wb.watchLinkedChat()
+
+  return { note, other, stop, wb }
+}
+
+const MARKER = 'From the Whiteboard board "Launch", which is linked to this chat.'
+
+test('the linked chat\'s answer comes back as a result waiting under Suggestions', async () => {
+  let history = [{ role: 'user', text: `${MARKER}\n\nPlease do this item from the board:\n\n- Book the venue` }, { role: 'assistant', text: '**The Old Mill is held for the 14th.**\n\nDeposit due Friday.' }]
+  const chat = chatHost({ history: () => history })
+  const { note, wb } = await linkedBoard(chat)
+
+  await wb.askLinkedChat([note.id])
+  assert.equal(wb.$asks.get().length, 1)
+  assert.equal(wb.$asks.get()[0].state, 'waiting')
+
+  // Another chat is busy: nothing of it is taken.
+  chat.emit('message.delta', { payload: { text: 'unrelated' }, session_id: 'live_other' })
+  await settle()
+  chat.emit('message.complete', { payload: { text: 'unrelated answer' }, session_id: 'live_other' })
+  await settle()
+  assert.equal(wb.$board.get().proposals.length, 0)
+  assert.equal(wb.$asks.get().length, 1)
+
+  // The linked chat starts: the first event ties its live session to the request.
+  chat.emit('message.start', { payload: {}, session_id: 'live_77' })
+  await settle()
+  assert.equal(wb.$asks.get()[0].sid, 'live_77')
+  chat.emit('tool.start', { payload: { name: 'web_search' }, session_id: 'live_77' })
+  assert.equal(wb.$asks.get()[0].state, 'working')
+  chat.emit('message.delta', { payload: { text: 'The Old Mill ' }, session_id: 'live_77' })
+  chat.emit('message.complete', { payload: { text: '' }, session_id: 'live_77' })
+  await settle()
+
+  assert.equal(wb.$asks.get().length, 0)
+
+  const [proposal] = wb.$board.get().proposals
+  const [item] = proposal.items
+
+  assert.equal(proposal.summary, 'The linked chat answered')
+  assert.equal(item.kind, 'result')
+  assert.equal(item.noteId, note.id)
+  assert.equal(item.state, 'pending')
+  assert.equal(item.title, 'The Old Mill is held for the 14th.')
+  assert.match(item.text, /Deposit due Friday/)
+  assert.equal(wb.$panel.get(), true)
+  assert.equal(chat.notices.at(-1).title, 'The linked chat answered')
+  // Nothing is on the board until the person accepts it.
+  assert.equal(wb.$board.get().items.some(entry => entry.kind === 'result'), false)
+  // The page only read the chat.
+  assert.deepEqual([...new Set(chat.requests.map(([method]) => method))].sort(), ['session.history', 'session.list'])
+
+  history = []
+})
+
+test('an answer to something else is left alone, and the request is still waited for', async () => {
+  let history = [{ role: 'user', text: 'what time is it?' }, { role: 'assistant', text: 'Half past nine.' }]
+  const chat = chatHost({ history: () => history })
+  const { note, wb } = await linkedBoard(chat)
+
+  await wb.askLinkedChat([note.id])
+  chat.emit('message.start', { payload: {}, session_id: 'live_77' })
+  await settle()
+  chat.emit('message.complete', { payload: { text: 'Half past nine.' }, session_id: 'live_77' })
+  await settle()
+  assert.equal(wb.$board.get().proposals.length, 0)
+  assert.equal(wb.$asks.get().length, 1)
+  assert.equal(wb.$asks.get()[0].state, 'waiting')
+
+  history = [...history, { role: 'user', text: `${MARKER}\n\n- Book the venue` }, { role: 'assistant', text: 'Booked.' }]
+  chat.emit('message.delta', { payload: { text: 'Booked.' }, session_id: 'live_77' })
+  chat.emit('message.complete', { payload: { text: 'Booked.' }, session_id: 'live_77' })
+  await settle()
+  assert.equal(wb.$board.get().proposals.length, 1)
+  assert.equal(wb.$board.get().proposals[0].items[0].text, 'Booked.')
+})
+
+test('when the chat reports through its own tool its answer is not taken twice, but a refused tool call does not lose it', async () => {
+  const history = () => [{ role: 'user', text: `${MARKER}\n\n- Book the venue` }, { role: 'assistant', text: 'Done: the Old Mill is booked.' }]
+  const run = async (wb, chat, note) => {
+    await wb.askLinkedChat([note.id])
+    chat.emit('message.start', { payload: {}, session_id: 'live_77' })
+    await settle()
+    chat.emit('tool.start', { payload: { name: 'whiteboard_propose' }, session_id: 'live_77' })
+  }
+
+  // The tool worked: its result is on the board before the turn ends.
+  const first = chatHost({ history })
+  const one = await linkedBoard(first, { setTimeout: go => (go(), 1) })
+
+  await run(one.wb, first, one.note)
+  one.wb.setBoard({ ...one.wb.$board.get(), proposals: [one.wb.chatProposal({ results: [{ note: one.note.id, reason: 'r', text: 'Booked, from the tool.' }], summary: 'Done' })] })
+  first.emit('message.complete', { payload: { text: 'Done: the Old Mill is booked.' }, session_id: 'live_77' })
+  await settle()
+  assert.equal(one.wb.$board.get().proposals.length, 1)
+  assert.equal(one.wb.$asks.get().length, 0)
+
+  // The tool was refused (chat access is off): nothing arrived, so the answer itself is taken.
+  const second = chatHost({ history })
+  const two = await linkedBoard(second, { setTimeout: go => (go(), 1) })
+
+  await run(two.wb, second, two.note)
+  second.emit('message.complete', { payload: { text: 'Done: the Old Mill is booked.' }, session_id: 'live_77' })
+  await settle()
+  assert.equal(two.wb.$board.get().proposals.length, 1)
+  assert.equal(two.wb.$board.get().proposals[0].summary, 'The linked chat answered')
+  assert.equal(two.wb.$board.get().proposals[0].items[0].text, 'Done: the Old Mill is booked.')
+})
+
+test('one answer for several notes goes to the first, and says so; a stopped listener hears nothing', async () => {
+  const chat = chatHost({ history: () => [{ role: 'user', text: `${MARKER}\n\n- Book the venue\n- Order flyers` }, { role: 'assistant', text: 'Both are done.' }] })
+  const { note, other, stop, wb } = await linkedBoard(chat)
+
+  await wb.askLinkedChat([note.id, other.id])
+  chat.emit('message.start', { payload: {}, session_id: 'live_77' })
+  await settle()
+  chat.emit('message.complete', { payload: { text: 'Both are done.' }, session_id: 'live_77' })
+  await settle()
+
+  const [item] = wb.$board.get().proposals[0].items
+
+  assert.equal(item.noteId, note.id)
+  assert.match(item.reason, /for the 2 items you sent/)
+
+  await wb.askLinkedChat([note.id])
+  stop()
+  chat.emit('message.start', { payload: {}, session_id: 'live_77' })
+  await settle()
+  assert.equal(wb.$asks.get()[0].sid, '')
 })
