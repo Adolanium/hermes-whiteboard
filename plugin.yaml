@@ -1,6 +1,6 @@
 name: whiteboard
-version: "0.1.8"
-description: "An agentic whiteboard. Say what you're planning and Hermes lays it out as a route, columns or a map, with hand-drawn stickers. Throw in rough notes and Hermes proposes groups, owners and action items you accept one by one. Hand an action item to Hermes and an agent does it on the board, with its own cursor, and delivers the result next to the note. Once you allow it, any chat can read your boards and propose changes. A board can be linked to the chat its work is in, and notes can become Hermes Kanban cards."
+version: "0.1.9"
+description: "An agentic whiteboard. Say what you're planning and Hermes lays it out as a route, columns or a map, with hand-drawn stickers. Throw in rough notes and Hermes proposes groups, owners and action items you accept one by one. Hand an action item to Hermes and an agent does it on the board, with its own cursor, and delivers the result next to the note. Once you allow it, any chat can read your boards and propose changes. A board can be linked to the chat its work is in: it shows what that chat is doing, and the chat hears what you change on the board. Notes can become Hermes Kanban cards."
 author: Adolanium
 license: MIT
 homepage: https://github.com/Adolanium/hermes-whiteboard
@@ -13,6 +13,10 @@ provides_tools:
   - whiteboard_read     # sections and notes of one board
   - whiteboard_propose  # notes, groups, action items and results, waiting for review on the board
   - whiteboard_create   # a new board from a plan worked out in chat
-provides_hooks: []
+provides_hooks:
+  - pre_llm_call      # a linked chat starts a turn: the board shows it, the chat hears board changes (follow.py)
+  - post_llm_call     # the turn's answer, first line only
+  - on_session_end    # how the turn ended
+  - post_compaction   # a compacted chat is told about its board again
 provides_middleware: []
 requires_env: []

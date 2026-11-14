@@ -9,7 +9,9 @@ any chat:
 - ``whiteboard_propose``: send new notes, groups and action items to a board. They wait on the board
   until the person accepts or skips each one, and accepted changes can be taken back;
 - ``whiteboard_create``: open a new board from a plan worked out in the chat;
-- the ``whiteboard:boards`` skill: how to work with a person's board without overstepping.
+- the ``whiteboard:boards`` skill: how to work with a person's board without overstepping;
+- hooks that follow the chat a board is linked to (follow.py), so the board shows what that chat is
+  doing and the chat hears what changed on the board.
 """
 
 from __future__ import annotations
@@ -20,9 +22,11 @@ _SKILL = Path(__file__).resolve().parent / "skills" / "boards" / "SKILL.md"
 
 
 def register(ctx):
+    from .follow import register_hooks
     from .tools import register_tools
 
     register_tools(ctx)
+    register_hooks(ctx)
     ctx.register_skill(
         "boards",
         _SKILL,

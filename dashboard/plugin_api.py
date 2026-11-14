@@ -9,6 +9,9 @@ backend to write the one file the person named (see picked.py).
 
 Send to Kanban comes through here too: on a click, the page asks this backend to make cards
 in Hermes Kanban, or to read one Kanban board so it can be laid out as a whiteboard (see kanban.py).
+
+A linked board follows its chat through here as well: the page says which chat each board is linked
+to (ids only), and reads back what the hooks saw in those chats (see follow.py).
 """
 
 from __future__ import annotations
@@ -49,7 +52,13 @@ router = APIRouter()
 
 @router.get("/inbox")
 def inbox() -> dict:
-    return {"entries": _store().Inbox().list()}
+    store = _store()
+    return {"entries": store.Inbox().list(), "follow": store.Follow().for_page()}
+
+
+@router.post("/links")
+def links(body: dict = Body(...)) -> dict:
+    return {"stored": _store().Links().set(body.get("links"))}
 
 
 @router.post("/inbox/{entry_id}/ack")

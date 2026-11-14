@@ -25,7 +25,8 @@ function load(options = {}) {
         $chatBridge, backendKey, finalAssistantText, profileRequest, recoverReply, setChatSharing, syncChats,
         boardFromKanban, kanbanCardOf, kanbanSpec, sendToKanban,
         $handoff, $runs, askLinkedChat, chatRequest, linkChat, listChats, requestHand, requestRun, seatInChat, takeChatEntry, unlinkChat,
-        $asks, $kanbanLive, $kanbanReads, $panel, chatEvent, finishAsk, followAsk, kanbanDrift, refreshFromKanban, refreshKanbanStatus, syncFromKanban, watchLinkedChat
+        $asks, $kanbanLive, $kanbanReads, $panel, chatEvent, finishAsk, followAsk, kanbanDrift, refreshFromKanban, refreshKanbanStatus, syncFromKanban, watchLinkedChat,
+        $chatActivity, applyChatStatus, createBoard, changesRequest, chatIsWorking, clearProgress, heardChanges, linksNow, patchItem, takeFollow, tellChat, turnLine, unheardChanges, watchFollow
       }
     `)
   const atom = initial => {
@@ -1831,4 +1832,255 @@ test('one answer for several notes goes to the first, and says so; a stopped lis
   chat.emit('message.start', { payload: {}, session_id: 'live_77' })
   await settle()
   assert.equal(wb.$asks.get()[0].sid, '')
+})
+
+// ---------------------------------------------------------------- one task, two views (0.1.9)
+function twoViews(options = {}) {
+  const storage = memoryStorage()
+  const wb = load({ storage, ...options })
+
+  wb.hydrate(storage)
+
+  const venue = wb.makeNote({ action: true, text: 'Book the venue', x: 0, y: 0 })
+  const flyers = wb.makeNote({ text: 'Print flyers', x: 300, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), items: [venue, flyers], name: 'Launch' })
+  wb.linkChat({ id: 's_77', title: 'Launch planning' })
+
+  return { flyers, storage, venue, wb }
+}
+
+test('what the person changes on a linked board is logged for its chat, and only what a note says', () => {
+  const { flyers, venue, wb } = twoViews()
+
+  // Linking starts a clean log, and a board with no chat keeps none.
+  assert.deepEqual(plain(wb.$board.get().changes), [])
+
+  const fresh = wb.makeNote({ text: '', x: 600, y: 0 })
+
+  wb.setBoard({ ...wb.$board.get(), items: [...wb.$board.get().items, fresh] })
+  assert.equal(wb.unheardChanges(wb.$board.get()).length, 0)
+  wb.patchItem(fresh.id, { text: 'Order cake' })
+  wb.patchItem(fresh.id, { owner: 'Maya' })
+  wb.patchItem(venue.id, { x: 40, y: 90 })
+  wb.patchItem(venue.id, { text: 'Book the big venue' })
+  wb.patchItem(venue.id, { text: 'Book the biggest venue' })
+  wb.removeItems([flyers.id])
+
+  const log = plain(wb.$board.get().changes).map(({ at: _at, ...change }) => change)
+
+  assert.deepEqual(log, [
+    { id: fresh.id, kind: 'added', owner: 'Maya', text: 'Order cake' },
+    { action: true, id: venue.id, kind: 'changed', text: 'Book the biggest venue' },
+    { id: flyers.id, kind: 'removed', text: 'Print flyers' }
+  ])
+
+  // Undo puts the note back before the chat heard it was gone, so there is nothing to tell about it.
+  wb.undo()
+  assert.deepEqual(plain(wb.$board.get().changes).map(change => change.kind), ['added', 'changed'])
+
+  // A note added and removed between two turns is nothing to tell either.
+  wb.removeItems([fresh.id])
+  assert.deepEqual(plain(wb.$board.get().changes).map(change => change.id), [venue.id])
+
+  const copy = plain(wb.sharedBoardCopy(wb.$board.get()))
+
+  assert.equal(copy.chat, 's_77')
+  assert.equal(copy.changes.length, 1)
+
+  wb.unlinkChat()
+  assert.equal('changes' in wb.$board.get(), false)
+  assert.equal('chat' in wb.sharedBoardCopy(wb.$board.get()), false)
+  wb.patchItem(venue.id, { text: 'Anything' })
+  assert.equal('changes' in wb.$board.get(), false)
+})
+
+test('the linked chat marks where it is with a note, at once and with no change to tell back', () => {
+  const { flyers, storage, venue, wb } = twoViews()
+  const marks = [{ detail: '  Waiting  on a quote ', note: venue.id, state: 'blocked' }, { note: flyers.id, state: 'finished' }, { note: 'nope', state: 'done' }]
+  const id = wb.$board.get().id
+
+  // Another chat's status is dropped, and so is one with no chat named.
+  assert.equal(wb.takeChatEntry({ board: id, chat: 'other', kind: 'proposal', status: marks, summary: 'Progress' }), 'skipped')
+  assert.equal(wb.takeChatEntry({ board: id, kind: 'proposal', status: marks, summary: 'Progress' }), 'skipped')
+  assert.equal(wb.$board.get().items.some(item => item.progress), false)
+
+  const undoable = wb.$board.get()
+
+  assert.equal(wb.takeChatEntry({ board: id, chat: 's_77', kind: 'proposal', status: marks, summary: 'Progress' }), 'taken')
+
+  const marked = wb.$board.get().items.find(item => item.id === venue.id)
+
+  assert.equal(marked.progress.state, 'blocked')
+  assert.equal(marked.progress.detail, 'Waiting on a quote')
+  assert.equal(wb.$board.get().items.find(item => item.id === flyers.id).progress, undefined)
+  assert.deepEqual(plain(wb.$board.get().changes), [])
+  assert.equal(wb.$board.get().proposals.length, 0)
+  assert.equal(plain(wb.sharedBoardCopy(wb.$board.get())).notes.find(note => note.id === venue.id).status, 'blocked')
+
+  // It is not the person's edit, so their undo does not step through it.
+  wb.undo()
+  assert.notEqual(wb.$board.get(), undoable)
+  wb.redo()
+
+  wb.clearProgress(venue.id)
+  assert.equal(wb.$board.get().items.find(item => item.id === venue.id).progress, undefined)
+  assert.deepEqual(plain(wb.$board.get().changes), [])
+
+  // A board that is not open is marked where it is stored.
+  wb.createBoard('Other')
+  assert.equal(wb.applyChatStatus(id, 's_77', [{ note: flyers.id, state: 'done' }]), 1)
+  assert.equal([...storage.values.values()].find(value => value?.id === id).items.find(item => item.id === flyers.id).progress.state, 'done')
+})
+
+test('status and suggestions in one entry are both taken', () => {
+  const { venue, wb } = twoViews()
+  const id = wb.$board.get().id
+
+  assert.equal(wb.takeChatEntry({ board: id, chat: 's_77', kind: 'proposal', notes: [{ reason: 'Missing', text: 'Tell people' }], status: [{ note: venue.id, state: 'doing' }], summary: 'Both' }), 'taken')
+  assert.equal(wb.$board.get().items.find(item => item.id === venue.id).progress.state, 'doing')
+  assert.equal(wb.$board.get().proposals.length, 1)
+})
+
+test('the board hears how the linked chat\'s turns go, pushed or read back, newest winning', () => {
+  const listeners = {}
+  const { wb } = twoViews({ host: { onEvent: (type, listener) => ((listeners[type] = listener), () => delete listeners[type]) } })
+  const stop = wb.watchFollow()
+  const now = Date.now()
+
+  listeners['plugin.whiteboard.chat.turn']({ payload: { at: now, chat: 's_77', state: 'working', turn: 't1' } })
+  assert.equal(wb.chatIsWorking(wb.$chatActivity.get().s_77), true)
+  assert.equal(wb.turnLine(wb.$chatActivity.get().s_77), 'The chat is working on a turn now.')
+
+  // An older report read back with the inbox does not undo a newer push.
+  wb.takeFollow({ chats: { s_77: { at: now - 5000, state: 'done' }, s_other: { at: now, headline: 'Refund sent', state: 'done' }, s_bad: { at: now, state: 'thinking' } } })
+  assert.equal(wb.$chatActivity.get().s_77.state, 'working')
+  assert.equal('s_bad' in wb.$chatActivity.get(), false)
+  assert.match(wb.turnLine(wb.$chatActivity.get().s_other), /^Its last turn finished just now: "Refund sent"$/)
+
+  listeners['plugin.whiteboard.chat.turn']({ payload: { at: now + 10, chat: 's_77', state: 'stopped', turn: 't1' } })
+  assert.equal(wb.chatIsWorking(wb.$chatActivity.get().s_77), false)
+  assert.match(wb.turnLine(wb.$chatActivity.get().s_77), /was stopped/)
+
+  // A turn that never reported its end stops reading as working.
+  assert.equal(wb.chatIsWorking({ at: now - 31 * 60 * 1000, state: 'working' }), false)
+  assert.equal(wb.turnLine(undefined), '')
+  listeners['plugin.whiteboard.chat.turn'](null)
+  stop()
+  assert.equal('plugin.whiteboard.chat.turn' in listeners, false)
+})
+
+test('changes the chat has heard stop waiting, on the open board and on a stored one', () => {
+  const { storage, venue, wb } = twoViews()
+  const id = wb.$board.get().id
+
+  wb.patchItem(venue.id, { text: 'Book the big venue' })
+
+  const [first] = wb.$board.get().changes
+
+  wb.heardChanges({ [id]: first.at - 1 })
+  assert.equal(wb.$board.get().changes.length, 1)
+  wb.heardChanges({ [id]: first.at })
+  assert.deepEqual(plain(wb.$board.get().changes), [])
+  wb.heardChanges(null)
+
+  // Hearing is not an edit: it does not land on the undo stack.
+  wb.undo()
+  assert.equal(wb.$board.get().items.find(item => item.id === venue.id).text, 'Book the venue')
+
+  wb.redo()
+  wb.patchItem(venue.id, { text: 'Book the biggest venue' })
+
+  const at = wb.$board.get().changes[0].at
+
+  wb.createBoard('Other')
+  wb.takeFollow({ delivered: { [id]: at } })
+  assert.deepEqual(plain([...storage.values.values()].find(value => value?.id === id).changes), [])
+})
+
+test('the backend is told which chat each board is linked to, ids only, and only when that changes', async () => {
+  const hermes = profiles(['default'])
+  const bodies = []
+  const rest = async (path, options = {}) => (path === '/links' && bodies.push(plain(options.body)), hermes.rest(path, options))
+  const storage = memoryStorage()
+  const wb = load({ host: hermes.host, rest, storage })
+
+  wb.hydrate(storage)
+  wb.setBoard({ ...wb.$board.get(), items: [wb.makeNote({ text: 'Book the venue', x: 0, y: 0 })], name: 'Launch' })
+
+  const id = wb.$board.get().id
+  const seen = { backend: null, shared: false }
+
+  await wb.syncChats(seen)
+  assert.deepEqual(bodies, [{ links: {} }])
+  wb.linkChat({ id: 's_77', title: 'Launch planning' })
+  await wb.syncChats(seen)
+  await wb.syncChats(seen)
+  assert.deepEqual(bodies.at(-1), { links: { [id]: 's_77' } })
+  assert.equal(bodies.length, 2)
+
+  // A board that is not open keeps its link in the list.
+  wb.createBoard('Other')
+  assert.deepEqual(plain(wb.linksNow(false)), { [id]: 's_77' })
+  await wb.syncChats(seen)
+  assert.equal(bodies.length, 2)
+
+  // What the hooks saw comes back with the inbox.
+  hermes.backends.default.inbox = []
+  const restWithFollow = async (path, options = {}) => (path === '/inbox' ? { entries: [], follow: { chats: { s_77: { at: Date.now(), state: 'working' } }, delivered: {} } } : rest(path, options))
+  const second = load({ host: hermes.host, rest: restWithFollow, storage })
+
+  second.hydrate(storage)
+  await second.syncChats({ backend: null, shared: false })
+  assert.equal(second.$chatActivity.get().s_77.state, 'working')
+})
+
+test('a backend from before 0.1.9 is asked for links once and the rest carries on', async () => {
+  const hermes = profiles(['default'])
+  let asked = 0
+  const rest = async (path, options = {}) => {
+    if (path === '/links') {
+      asked += 1
+      throw new Error('404')
+    }
+
+    return hermes.rest(path, options)
+  }
+  const storage = memoryStorage()
+  const wb = load({ host: hermes.host, rest, storage })
+
+  wb.hydrate(storage)
+
+  const seen = { backend: null, shared: false }
+
+  await wb.syncChats(seen)
+  await wb.syncChats(seen)
+  assert.equal(asked, 1)
+  assert.equal(wb.$chatBridge.get(), 'ok')
+})
+
+test('Tell the chat now writes the unheard changes into the message box and stops them waiting', async () => {
+  const seen = []
+  const { flyers, venue, wb } = twoViews({
+    host: {
+      composer: { focus: () => undefined, insertText: async (id, text) => (seen.push(['insert', id, text]), true), submit: () => seen.push(['submit']) },
+      openSession: async id => seen.push(['open', id]),
+      request: async method => (seen.push(['request', method]), {})
+    },
+    setTimeout: run => (run(), 1)
+  })
+
+  await assert.rejects(wb.tellChat(), /nothing new to tell/)
+  wb.patchItem(venue.id, { due: 'Friday', text: 'Book the big venue' })
+  wb.removeItems([flyers.id])
+  assert.match(await wb.tellChat(), /message box/)
+
+  const [, chat, text] = seen.find(([what]) => what === 'insert')
+
+  assert.equal(chat, 's_77')
+  assert.match(text, /^From the Whiteboard board "Launch", which is linked to this chat\./)
+  assert.match(text, /- Changed to: Book the big venue \(due: Friday\) \(action item\)\n- Removed: Print flyers$/)
+  assert.deepEqual(plain(wb.$board.get().changes), [])
+  // The page still never sends for the person.
+  assert.equal(seen.some(([what]) => what === 'submit' || what === 'request'), false)
 })

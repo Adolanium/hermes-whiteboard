@@ -724,7 +724,8 @@ function boardMeta(board) {
     count: board.items.filter(item => item.kind === 'note').length,
     id: board.id,
     name: board.name,
-    updatedAt: board.updatedAt
+    updatedAt: board.updatedAt,
+    ...(board.chat?.id ? { chat: board.chat.id } : {})
   }
 }
 
@@ -760,9 +761,75 @@ function upsertMeta(board) {
   $index.set({ activeId: board.id, boards })
 }
 
+// What the person changed on a linked board since its chat last heard. The
+// chat is told with the next message the person sends there (follow.py), or
+// when they press Tell the chat now. Only what a note says is logged: its text,
+// owner, due date and whether it is an action item. Moving things is not news.
+const MAX_CHANGES = 30
+const CHANGE_FIELDS = ['text', 'owner', 'due', 'action']
+// Every round of changes gets a later time than the last, so "heard up to here" never swallows a newer one.
+let changeClock = 0
+
+function changeEntry(kind, note, at) {
+  return Object.fromEntries(
+    Object.entries({ action: note.action || undefined, at, due: note.due, id: note.id, kind, owner: note.owner, text: clean(note.text, 280) }).filter(([, value]) => value !== undefined && value !== '')
+  )
+}
+
+function logChanges(log, previous, next) {
+  if (previous.items === next.items) {
+    return log
+  }
+
+  const notesOf = board => new Map(board.items.filter(item => item.kind === 'note').map(item => [item.id, item]))
+  const before = notesOf(previous)
+  const after = notesOf(next)
+  const at = Math.max(Date.now(), changeClock + 1)
+  let out = log
+
+  for (const [id, note] of after) {
+    const was = before.get(id)
+    const waiting = out.find(change => change.id === id)
+
+    if (!was) {
+      // A note that comes back before the chat heard it was gone never left.
+      out = out.filter(change => change.id !== id)
+
+      if (waiting?.kind !== 'removed') {
+        out = [...out, changeEntry('added', note, at)]
+      }
+    } else if (CHANGE_FIELDS.some(field => (was[field] || '') !== (note[field] || ''))) {
+      out = [...out.filter(change => change.id !== id), changeEntry(waiting?.kind === 'added' ? 'added' : 'changed', note, at)]
+    }
+  }
+
+  for (const [id, note] of before) {
+    if (!after.has(id)) {
+      const waiting = out.find(change => change.id === id)
+
+      out = out.filter(change => change.id !== id)
+
+      // A note added and removed between two turns is nothing to tell.
+      if (waiting?.kind !== 'added' && clean(note.text, 280)) {
+        out = [...out, changeEntry('removed', note, at)]
+      }
+    }
+  }
+
+  if (out === log) {
+    return log
+  }
+
+  changeClock = at
+
+  return out.slice(-MAX_CHANGES)
+}
+
 /** The one door every change goes through. `undo: false` is for view moves
- *  and run bookkeeping that should not fill the undo stack. */
-function setBoard(next, { undo = true } = {}) {
+ *  and run bookkeeping that should not fill the undo stack. `log: false` is
+ *  for what the linked chat itself put on the board, and `changes` replaces
+ *  the log once the chat has heard part of it. */
+function setBoard(next, { undo = true, log = true, changes } = {}) {
   const current = $board.get()
 
   if (undo) {
@@ -771,6 +838,15 @@ function setBoard(next, { undo = true } = {}) {
   }
 
   const board = { ...next, updatedAt: Date.now() }
+
+  if (!board.chat?.id) {
+    delete board.changes
+  } else if (current.id === board.id) {
+    // The log is not part of what undo restores: it follows what the chat has heard.
+    const kept = current.chat?.id === board.chat.id ? (changes ?? current.changes ?? []) : []
+
+    board.changes = log && current.chat?.id === board.chat.id ? logChanges(kept, current, board) : kept
+  }
 
   $board.set(board)
   upsertMeta(board)
@@ -1786,12 +1862,14 @@ function sharedBoardCopy(board) {
             owner: note.owner,
             result: delivered ? clean(`${delivered.title}: ${delivered.text}`, 600) : undefined,
             section: lookup.get(note.frame)?.title,
+            status: PROGRESS[note.progress?.state] ? note.progress.state : undefined,
             text: clean(note.text, 400)
           }).filter(([, value]) => value !== undefined && value !== '')
         )
       }),
     sections: sectionsOf(board).map(section => ({ id: section.id, label: section.label, title: section.title })),
-    updatedAt: board.updatedAt
+    updatedAt: board.updatedAt,
+    ...(board.chat?.id ? { chat: board.chat.id, ...(board.changes?.length ? { changes: board.changes } : {}) } : {})
   }
 }
 
@@ -3558,6 +3636,225 @@ function watchLinkedChat() {
   return () => stops.forEach(stop => typeof stop === 'function' && stop())
 }
 
+// What Hermes itself says about the linked chat. The plugin's hooks (follow.py)
+// see every turn of a linked chat, however it was started, and report it here:
+// pushed while the page is open, and read back with the inbox otherwise. This
+// is how a board follows work that began in the chat, not on the board.
+const $chatActivity = atom({})
+const WORKING_TTL_MS = 30 * 60 * 1000
+const PROGRESS = { blocked: 'Blocked', doing: 'Chat is on it', done: 'Chat: done' }
+const TURN_STATES = new Set(['working', 'done', 'failed', 'stopped'])
+const heardTo = new Map()
+
+function takeTurn(chat, turn) {
+  const id = clean(chat, 200)
+  const at = Number(turn?.at) || 0
+  const known = $chatActivity.get()
+
+  if (!id || !TURN_STATES.has(turn?.state) || (known[id]?.at || 0) > at) {
+    return
+  }
+
+  if (known[id]?.at === at && known[id].state === turn.state) {
+    return
+  }
+
+  $chatActivity.set({ ...known, [id]: { at, headline: clean(turn.headline, 80), state: turn.state, turn: clean(turn.turn, 120) } })
+}
+
+/** The chat has heard the changes up to `at`: they are no longer waiting. */
+function heardChanges(delivered) {
+  for (const [id, value] of Object.entries(delivered && typeof delivered === 'object' ? delivered : {})) {
+    const at = Number(value) || 0
+
+    if (at <= (heardTo.get(id) || 0)) {
+      continue
+    }
+
+    heardTo.set(id, at)
+
+    const open = $board.get()
+
+    if (open.id === id) {
+      if (open.changes?.some(change => change.at <= at)) {
+        setBoard({ ...open }, { changes: open.changes.filter(change => change.at > at), log: false, undo: false })
+      }
+    } else {
+      const stored = restoreBoard(storage?.get(boardKey(id), null), id)
+
+      if (stored?.changes?.some(change => change.at <= at)) {
+        storage.set(boardKey(id), { ...stored, changes: stored.changes.filter(change => change.at > at) })
+      }
+    }
+  }
+}
+
+function takeFollow(follow) {
+  for (const [chat, turn] of Object.entries(follow?.chats && typeof follow.chats === 'object' ? follow.chats : {})) {
+    takeTurn(chat, turn)
+  }
+
+  heardChanges(follow?.delivered)
+}
+
+function watchFollow() {
+  const stop = host.onEvent('plugin.whiteboard.chat.turn', event => {
+    try {
+      takeTurn(event?.payload?.chat, event?.payload)
+      heardChanges(event?.payload?.delivered)
+    } catch {
+      // A listener must never break the stream it listens to.
+    }
+  })
+
+  return () => typeof stop === 'function' && stop()
+}
+
+/** Which chat each board is linked to, ids only. The first time, boards saved
+ *  before the index knew about links are opened to find theirs. */
+function linksNow(deep) {
+  const links = {}
+  const open = $board.get()
+
+  for (const meta of $index.get().boards) {
+    let chat = meta.id === open.id ? open.chat?.id : meta.chat
+
+    if (deep && !chat && meta.id !== open.id) {
+      chat = restoreBoard(storage?.get(boardKey(meta.id), null), meta.id)?.chat?.id
+    }
+
+    if (chat) {
+      links[meta.id] = chat
+    }
+  }
+
+  return links
+}
+
+/** Tell the backend the links when they change, so its hooks know which chats to follow. */
+async function syncLinks(seen) {
+  if (seen.linksOff) {
+    return
+  }
+
+  const links = linksNow(seen.links === undefined)
+  const key = JSON.stringify(links)
+
+  if (key === seen.links) {
+    return
+  }
+
+  try {
+    await pluginRest('/links', { body: { links }, method: 'POST' })
+    seen.links = key
+  } catch {
+    // A backend from before 0.1.9: the board still follows requests it sent itself.
+    seen.linksOff = true
+  }
+}
+
+/** A status the linked chat reported for its own board's notes. It shows at once
+ *  and changes nothing else; anyone else's status is dropped. */
+function applyChatStatus(boardId, chat, marks) {
+  const open = $board.get()
+  const board = open.id === boardId ? open : restoreBoard(storage?.get(boardKey(boardId), null), boardId)
+  const byNote = new Map()
+
+  for (const mark of Array.isArray(marks) ? marks.slice(0, 20) : []) {
+    if (PROGRESS[mark?.state] && clean(mark.note, 60)) {
+      byNote.set(clean(mark.note, 60), { at: Date.now(), state: mark.state, ...(clean(mark.detail, 120) ? { detail: clean(mark.detail, 120) } : {}) })
+    }
+  }
+
+  if (!board?.chat?.id || board.chat.id !== chat || byNote.size === 0) {
+    return 0
+  }
+
+  let marked = 0
+  const items = board.items.map(item => {
+    if (item.kind !== 'note' || !byNote.has(item.id)) {
+      return item
+    }
+
+    marked += 1
+
+    return { ...item, progress: byNote.get(item.id), rev: rev() }
+  })
+
+  if (marked === 0) {
+    return 0
+  }
+
+  if (board === open) {
+    setBoard({ ...open, items }, { log: false, undo: false })
+  } else {
+    storage.set(boardKey(board.id), { ...board, items })
+  }
+
+  return marked
+}
+
+function clearProgress(id) {
+  const board = $board.get()
+
+  setBoard({ ...board, items: board.items.map(item => (item.id === id ? { ...item, progress: undefined, rev: rev() } : item)) }, { log: false, undo: false })
+}
+
+/** What Tell the chat now writes: the changes the chat has not heard yet. */
+function changesRequest(board, changes) {
+  const line = change => {
+    const extra = `${change.owner ? ` (owner: ${change.owner})` : ''}${change.due ? ` (due: ${change.due})` : ''}${change.action ? ' (action item)' : ''}`
+
+    return change.kind === 'removed' ? `- Removed: ${change.text}` : `- ${change.kind === 'added' ? 'Added' : 'Changed to'}: ${change.text}${extra}`
+  }
+
+  return [chatMarker(board), 'I changed the board. Please take these into account and tell me if any of them changes the plan:', changes.map(line).join('\n')].join('\n\n')
+}
+
+const unheardChanges = board => (board.chat?.id && Array.isArray(board.changes) ? board.changes.filter(change => change.text) : [])
+
+async function tellChat() {
+  const board = $board.get()
+  const changes = unheardChanges(board)
+
+  if (!board.chat?.id || changes.length === 0) {
+    throw new Error('There is nothing new to tell the chat.')
+  }
+
+  const how = await seatInChat(board.chat.id, changesRequest(board, changes))
+  const last = Math.max(...changes.map(change => change.at))
+  const now = $board.get()
+
+  if (now.id === board.id) {
+    setBoard({ ...now }, { changes: (now.changes || []).filter(change => change.at > last), log: false, undo: false })
+  }
+
+  return how === 'seated' ? 'The changes are in the message box. Press Enter to send them.' : 'The changes are copied. Paste them into the chat.'
+}
+
+function agoText(at) {
+  const minutes = Math.max(0, Math.round((Date.now() - at) / 60000))
+
+  return minutes < 1 ? 'just now' : minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.round(minutes / 60)} h ago` : `${Math.round(minutes / 1440)} d ago`
+}
+
+const chatIsWorking = turn => turn?.state === 'working' && Date.now() - turn.at < WORKING_TTL_MS
+
+/** One line about the linked chat's latest turn, or nothing when Hermes has not reported one. */
+function turnLine(turn) {
+  if (!turn) {
+    return ''
+  }
+
+  if (turn.state === 'working') {
+    return chatIsWorking(turn) ? 'The chat is working on a turn now.' : ''
+  }
+
+  const said = turn.headline ? `: "${turn.headline}"` : '.'
+
+  return turn.state === 'done' ? `Its last turn finished ${agoText(turn.at)}${said}` : turn.state === 'failed' ? `Its last turn failed ${agoText(turn.at)}.` : `Its last turn was stopped ${agoText(turn.at)}.`
+}
+
 /** Hand to Hermes, from a click. A linked board asks where the work should go. */
 function requestHand(noteIds) {
   if ($board.get().chat?.id) {
@@ -3920,10 +4217,11 @@ function takeChatEntry(entry) {
     return 'taken'
   }
 
+  const marked = Array.isArray(entry?.status) ? applyChatStatus(entry.board, clean(entry.chat, 200), entry.status) : 0
   const proposal = chatProposal(entry || {})
 
   if (!proposal) {
-    return 'skipped'
+    return marked > 0 ? 'taken' : 'skipped'
   }
 
   if (entry.board === $board.get().id) {
@@ -4080,6 +4378,8 @@ async function syncChats(seen) {
   if (backend !== seen.backend) {
     seen.backend = backend
     seen.shared = false
+    seen.links = undefined
+    seen.linksOff = false
     $chatBridge.set('unknown')
   }
 
@@ -4100,6 +4400,13 @@ async function syncChats(seen) {
 
       takeChatEntry(entry)
       await pluginRest(`/inbox/${encodeURIComponent(entry.id)}/ack`, { method: 'POST' })
+    }
+
+    takeFollow(answer?.follow)
+    await syncLinks(seen)
+
+    if (backendKey() !== backend) {
+      return
     }
 
     if (!seen.shared) {
@@ -4258,6 +4565,14 @@ const CSS = `
 .wb-chip.wb-kanban.wb-kanban-gone { background: none; color: hsl(232 14% 40%); border-color: hsl(232 14% 60%); border-style: dashed; }
 .wb-chip.wb-asked.wb-working { background: hsl(41 92% 50%); border-color: hsl(41 92% 42%); color: hsl(232 26% 17%); }
 .wb-btn.wb-drift { border-color: hsl(41 92% 45%); }
+.wb-btn.wb-linked.wb-working { border-color: hsl(41 92% 45%); }
+.wb-btn.wb-linked.wb-working { max-width: 290px; }
+.wb-btn.wb-linked b { flex-shrink: 0; padding: 1px 6px; border-radius: 999px; background: hsl(41 92% 50%); color: hsl(232 26% 17%); font-size: 11px; font-weight: 600; }
+.wb-btn.wb-linked i { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: hsl(41 92% 50%); }
+.wb-chip.wb-progress { cursor: pointer; font: inherit; }
+.wb-chip.wb-progress-doing { background: hsl(41 92% 50%); border-color: hsl(41 92% 42%); color: hsl(232 26% 17%); }
+.wb-chip.wb-progress-done { background: hsl(150 45% 32%); border-color: hsl(150 45% 32%); color: hsl(40 40% 98%); }
+.wb-chip.wb-progress-blocked { background: hsl(4 70% 46%); border-color: hsl(4 70% 40%); color: hsl(40 40% 98%); }
 .wb-chip.wb-asked { background: hsl(210 60% 92%); color: hsl(215 50% 28%); border-color: hsl(210 45% 80%); }
 .wb-handoff { position: absolute; inset: 0; z-index: 12; display: flex; align-items: center; justify-content: center; background: hsl(232 26% 17% / .28); }
 .wb-handoff-card { width: 340px; max-width: calc(100% - 32px); padding: 18px; border-radius: 16px; background: var(--ui-surface-background); color: var(--ui-text-primary); border: 1.5px solid hsl(232 26% 17%); box-shadow: 4px 5px 0 hsl(232 26% 17% / .9); display: flex; flex-direction: column; gap: 6px; font: 13px/1.45 var(--font-sans, system-ui); }
@@ -4708,7 +5023,7 @@ function EditableText({ value, onDone, multiline = true, className }) {
 function NoteView({ item, editing, run, k, far }) {
   const tone = TONES[item.tone] || TONES.butter
   const working = run?.state === 'running' || run?.state === 'queued'
-  const meta = !editing && (item.owner || item.due || item.action || item.kanban || item.asked)
+  const meta = !editing && (item.owner || item.due || item.action || item.kanban || item.asked || item.progress)
   const lines = Math.max(1, Math.floor((item.h - 30 - (working || (meta && !far) ? 26 : 0)) / (14 * k * 1.34)))
 
   return jsxs('div', {
@@ -4728,7 +5043,8 @@ function NoteView({ item, editing, run, k, far }) {
               item.owner ? jsx('span', { className: 'wb-chip', children: item.owner }, 'o') : null,
               item.due ? jsx('span', { className: 'wb-chip', children: item.due }, 'd') : null,
               item.kanban?.id ? jsx(KanbanChip, { mark: item.kanban }, 'k') : null,
-              item.asked && item.status !== 'delivered' ? jsx(AskedChip, { id: item.id }, 'c') : null
+              PROGRESS[item.progress?.state] ? jsx(ProgressChip, { item }, 'p') : null,
+              item.asked && !item.progress && item.status !== 'delivered' ? jsx(AskedChip, { id: item.id }, 'c') : null
             ]
           })
         : null,
@@ -5408,6 +5724,9 @@ function TopBar({ board }) {
   const close = useCallback(() => setMenu(null), [])
   const pending = board.proposals.reduce((count, proposal) => count + proposal.items.filter(item => item.state === 'pending').length, 0)
   const notes = board.items.filter(item => item.kind === 'note').length
+  const turn = useValue($chatActivity)[board.chat?.id]
+  const chatWorking = chatIsWorking(turn)
+  const unheard = unheardChanges(board).length
 
   useOutside(Boolean(menu), close)
 
@@ -5479,13 +5798,17 @@ function TopBar({ board }) {
           }),
       board.chat?.id
         ? jsx(Tip, {
-            label: 'This board is linked to a chat',
+            label: chatWorking ? 'The linked chat is working now' : unheard > 0 ? `This board is linked to a chat. ${unheard} change${unheard === 1 ? '' : 's'} here it has not heard yet` : 'This board is linked to a chat',
             children: jsxs('button', {
-              className: 'wb-btn wb-linked',
+              className: `wb-btn wb-linked${chatWorking ? ' wb-working' : ''}`,
               'data-menu-trigger': true,
               onClick: () => setMenu(menu === 'chat' ? null : 'chat'),
               type: 'button',
-              children: [jsx(Line, { name: 'chat' }), jsx('span', { children: clean(board.chat.title, 26) || 'Linked chat' })]
+              children: [
+                jsx(Line, { name: 'chat' }),
+                jsx('span', { children: clean(board.chat.title, 26) || 'Linked chat' }),
+                chatWorking ? jsx('b', { children: 'working' }) : unheard > 0 ? jsx('i', {}) : null
+              ]
             })
           })
         : null,
@@ -5510,7 +5833,16 @@ function TopBar({ board }) {
             style: { left: 10, top: 42 },
             children: [
               jsx('small', { children: `This board belongs to the work in "${clean(board.chat?.title, 60) || 'a chat'}". Hand to Hermes and Run ask before they start anything separate.` }),
+              turnLine(turn) ? jsx('small', { children: turnLine(turn) }) : null,
               jsxs('button', { onClick: () => void run('open that chat', () => openLinkedChat(board.chat.id)), type: 'button', children: [jsx(Line, { name: 'chat' }), 'Open the chat'] }),
+              unheard > 0
+                ? jsx('small', {
+                    children: sharing
+                      ? `${unheard} change${unheard === 1 ? '' : 's'} you made here ${unheard === 1 ? 'goes' : 'go'} to the chat with your next message there.`
+                      : `${unheard} change${unheard === 1 ? '' : 's'} you made here ${unheard === 1 ? 'has' : 'have'} not reached the chat. With "Chats can read my boards" on, they go along with your next message there.`
+                  })
+                : null,
+              unheard > 0 ? jsxs('button', { onClick: () => void run('tell the chat', tellChat), type: 'button', children: [jsx(Line, { name: 'chat' }), 'Tell the chat now'] }) : null,
               jsxs('button', { 'data-menu-trigger': true, onClick: () => setMenu('link'), type: 'button', children: [jsx(icons.Pencil, { size: 15 }), 'Link to another chat'] }),
               jsxs('button', {
                 onClick: () => {
@@ -5726,6 +6058,23 @@ function AskedChip({ id }) {
     className: `wb-chip wb-asked${working ? ' wb-working' : ''}`,
     title: working ? 'The linked chat is working on this now. Its answer will wait under Suggestions.' : 'This was put to the linked chat. Its answer comes back as a suggestion.',
     children: working ? 'Chat is working' : 'Asked in chat'
+  })
+}
+
+/** Where the linked chat says it is with a note. It came without review, so one click clears it. */
+function ProgressChip({ item }) {
+  const { detail, state } = item.progress
+
+  return jsx('button', {
+    className: `wb-chip wb-progress wb-progress-${state}`,
+    onClick: event => {
+      event.stopPropagation()
+      clearProgress(item.id)
+    },
+    onPointerDown: event => event.stopPropagation(),
+    title: `The linked chat reported this${detail ? `: ${detail}` : ''}. Click to clear it.`,
+    type: 'button',
+    children: PROGRESS[state]
   })
 }
 
@@ -6475,6 +6824,7 @@ export default {
     }
 
     ctx.onDispose(watchLinkedChat())
+    ctx.onDispose(watchFollow())
 
     ctx.onDispose(() => {
       stopCompose()
