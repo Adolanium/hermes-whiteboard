@@ -111,11 +111,18 @@ Your Hermes Desktop  →  local board storage  →  your Hermes model (only when
 - A linked chat's turns are followed whether or not the board started them, but the board shows a chat, not a task inside it: a message still waiting in the chat's queue has no id in Hermes, so the board cannot point at it. Status marks and board changes need **Chats can read my boards** on. Board changes reach the chat with your next message there, never on their own. After an update from 0.1.8, restart the Hermes gateway so the hooks load. An answer to a request sent from the board is still picked up only while Hermes Desktop is open, and one answer covering several notes is attached to the first of them.
 - Send to Kanban takes up to 24 notes at a time. Kanban is read, never changed, after a card is made: moving a note does not move its card.
 
+## Languages
+
+Every string the page shows lives in `MESSAGES` at the top of `desktop/plugin.js` — one flat block per locale, the same keys in each. English and Chinese are filled in. A component asks for the translator once, `const t = usePluginI18n('whiteboard')`; handlers and other module-level code use `tr`. A message that counts things is a function, and it takes the same arguments in every locale.
+
+To add a locale, copy the `en` block and translate the values. `node --test tests/i18n.test.mjs` fails when a key is missing from a locale, when the arguments of one differ between locales, or when a component calls `t` without declaring it first — that last one blanks the whole page, so it is worth the check.
+
 ## Development checks
 
 ```sh
 node check.mjs
 node --test tests/board.test.mjs
+node --test tests/i18n.test.mjs
 python -m pytest tests
 hermes plugins validate .
 ```
