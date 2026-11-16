@@ -120,7 +120,180 @@ const MESSAGES = {
     'tone.sky': 'Sky',
     'tone.lilac': 'Lilac',
     'tone.paper': 'Paper',
-    'group.newTitle': 'New group'
+    'group.newTitle': 'New group',
+    'activity.browsing': 'Browsing',
+    'activity.starting': 'Starting',
+    'ago.justNow': 'just now',
+    'bullets.empty': 'There was nothing in that result to unpack.',
+    'bullets.point': 'A point of the result',
+    'changes.actionItem': ' (action item)',
+    'changes.added': 'Added',
+    'changes.changedTo': 'Changed to',
+    'changes.inBox': 'The changes are in the message box. Press Enter to send them.',
+    'chat.answerTip': 'The answer from the linked chat.',
+    'chat.answered': 'The linked chat answered',
+    'chat.workingTurn': 'The chat is working on a turn now.',
+    'chip.archived': 'archived',
+    'chip.askedTip': 'This was put to the linked chat. Its answer comes back as a suggestion.',
+    'chip.askedWorkingTip': 'The linked chat is working on this now. Its answer will wait under Suggestions.',
+    'chip.chatDone': 'Chat: done',
+    'chip.chatOnIt': 'Chat is on it',
+    'chip.chatWorking': 'Chat is working',
+    'chip.onKanban': 'On Kanban',
+    'chip.open': 'Open',
+    'compose.layingOut': 'laying out',
+    'error.closed': 'Hermes closed before this finished.',
+    'error.noSession': 'Hermes did not return a session.',
+    'error.stopped': 'stopped',
+    'export.asTable': 'Export board as a table',
+    'handoff.ask': 'Ask in the linked chat',
+    'handoff.askNote': 'Opens the chat with the request written out. You send it, and the chat keeps its own approvals.',
+    'handoff.copied': 'The request is copied. Paste it into the chat.',
+    'handoff.seated': 'The request is in the message box. Press Enter to send it.',
+    'handoff.separate': 'Start separate work here',
+    'handoff.separateNote': 'New Hermes agents do it from the board. The chat is not told.',
+    'kanbanBoards.loading': 'Asking Kanban for its boards...',
+    'kanbanBoards.open': 'open',
+    'kanbanBoards.pickNote': 'Pick a note with some text on it first.',
+    'kanbanBoards.startOffNote': 'Off: they are parked in Blocked and nothing runs until you unblock them.',
+    'kanbanBoards.startOnNote': 'They go to Triage. Hermes splits each into tasks and its agents begin, on your model.',
+    'model.hermesDefault': 'Hermes default',
+    'model.none': 'Hermes listed no models you are signed in to.',
+    'model.notListed': ' (not listed by Hermes now)',
+    'note.again': 'Again',
+    'note.agentTip': 'A Hermes agent does this and delivers the result here',
+    'note.retry': 'Retry',
+    'note.stop': 'Stop',
+    'note.waitingAgent': 'Waiting for a free agent',
+    'notify.boardMade': 'Hermes made a board',
+    'panel.hermesSuggests': 'Hermes suggests',
+    'picker.empty': 'No chats in this Hermes profile yet.',
+    'picker.intro': 'Link this board to the chat its work is happening in:',
+    'picker.loading': 'Asking Hermes for your chats...',
+    'plan.looseEnds': 'Loose ends',
+    'plan.writingBrief': 'Writing the brief',
+    'proposal.fromChat': 'From chat',
+    'result.data': 'Data',
+    'result.sheets': 'Sheets',
+    'result.unpack': 'Unpack into notes',
+    'result.unpackTip': 'Hermes turns this into notes and next steps for you to accept',
+    'result.unpacking': 'Unpacking',
+    'stale.notesGone': 'Most of these notes are gone.',
+    'status.blocked': 'Blocked',
+    'status.delivered': 'Delivered',
+    'status.done': 'Done',
+    'status.ready': 'Ready',
+    'status.review': 'Review',
+    'status.running': 'Running',
+    'status.todo': 'To do',
+    'status.triage': 'Triage',
+    'sticker.access': 'Access',
+    'sticker.break': 'Break',
+    'sticker.bug': 'Bug',
+    'sticker.build': 'Build',
+    'sticker.calendar': 'Calendar',
+    'sticker.delivery': 'Delivery',
+    'sticker.docs': 'Docs',
+    'sticker.done': 'Done',
+    'cursor.verb': (v) => `Hermes · ${v}`,
+    'cursor.stop': (i, n) => `Hermes · stop ${i} of ${n}`,
+    'cursor.answered': 'Hermes · answered',
+    'cursor.brief': 'Hermes · writing the brief',
+    'cursor.browsing': 'browsing',
+    'cursor.delivered': 'Hermes · delivered',
+    'cursor.reading': 'Hermes · reading',
+    'cursor.searching': 'searching',
+    'cursor.starting': 'Hermes · starting',
+    'cursor.thinking': 'Hermes · thinking',
+    'cursor.working': 'working',
+
+    'sticker.flag': 'Flag',
+    'sticker.gift': 'Gift',
+    'sticker.growth': 'Growth',
+    'sticker.hermes': 'Hermes',
+    'sticker.idea': 'Idea',
+    'sticker.launch': 'Launch',
+    'sticker.love': 'Love',
+    'sticker.mail': 'Mail',
+    'sticker.media': 'Media',
+    'sticker.money': 'Money',
+    'sticker.people': 'People',
+    'sticker.place': 'Place',
+    'sticker.research': 'Research',
+    'sticker.risk': 'Risk',
+    'sticker.rocket': 'Rocket',
+    'sticker.safety': 'Safety',
+    'sticker.sales': 'Sales',
+    'sticker.spark': 'Spark',
+    'sticker.star': 'Star',
+    'sticker.talk': 'Talk',
+    'sticker.target': 'Target',
+    'sticker.time': 'Time',
+    'sticker.travel': 'Travel',
+    'sticker.win': 'Win',
+    'suggest.answer': 'Answer',
+    'takeBack.already': 'Already taken back.',
+    'takeBack.changed': 'Something changed these since. Use undo instead.',
+    'tidy.needNotes': 'Add a few notes first. Hermes groups what is on the board.',
+    'toast.dismiss': 'Dismiss',
+    'tool.hand': 'Hand to Hermes',
+    'top.agentHint': 'Does the work: Hand to Hermes, Run the route and Ask.',
+    'top.agentModel': 'Agent model',
+    'top.export': 'Export',
+    'top.kanbanChanged': 'Kanban changed · Refresh',
+    'top.kanbanIntro': 'Lay a Kanban board out as a new whiteboard:',
+    'top.linkedBoard': 'This board is linked to a chat',
+    'top.linkedWorking': 'The linked chat is working now',
+    'top.needNotes': 'Add a few notes first',
+    'top.planningHint': 'Lays out boards, groups notes, unpacks results and writes the brief.',
+    'top.planningModel': 'Planning model',
+    'top.settings': 'Settings',
+    'top.tidyTip': 'Hermes suggests groups, owners and action items. You accept or skip each one.',
+    'ago.days': (n) => `${n} d ago`,
+    'ago.hours': (n) => `${n} h ago`,
+    'ago.minutes': (n) => `${n} min ago`,
+    'chat.linkedTo': (t) => `Linked to "${t}".`,
+    'chat.turnDone': (ago, said) => `Its last turn finished ${ago}${said}`,
+    'chat.turnFailed': (ago) => `Its last turn failed ${ago}.`,
+    'chat.turnStopped': (ago) => `Its last turn was stopped ${ago}.`,
+    'chip.cardArchived': (i, b) => `Card ${i} is no longer on the Kanban board ${b}. It was archived there.`,
+    'chip.cardTitle': (i, b, c) => `Card ${i} on the Kanban board ${b}${c}`,
+    'chip.reported': (d) => `The linked chat reported this${d}. Click to clear it.`,
+    'chip.reportedDetail': (d) => `: ${d}`,
+    'compose.activity': (a) => ` · ${a}`,
+    'compose.working': (v, r, a) => `Hermes is ${v} "${r}"${a}`,
+    'error.listModels': (e) => `Hermes could not list your models: ${e}`,
+    'error.maxSteps': (n) => `Stopped after ${n} tool calls without finishing.`,
+    'error.noAnswer': (s) => `No answer after ${s} seconds, so it was stopped.`,
+    'error.save': (e) => `Whiteboard could not save: ${e}`,
+    'error.turnEnded': (s) => `The turn ended as ${s}.`,
+    'handoff.planItems': (n) => `the ${n} open item${n === 1 ? '' : 's'} of this plan`,
+    'handoff.question': (c, w) => `"${c}" already owns this work. Where should ${w} go?`,
+    'handoff.theseNotes': (n) => `these ${n} notes`,
+    'plan.agents': (n) => ` · ${n} agent${n === 1 ? '' : 's'}`,
+    'plan.intro': (n) => `Hermes travels the board stop by stop and its agents do the ${n} open action item${n === 1 ? '' : 's'}, each building on the last`,
+    'plan.stopLine': (i, n, l, a) => `Stop ${i} of ${n} · ${l}${a}`,
+    'result.doneBy': (m) => `Done by ${m}`,
+    'result.used': (f) => `Used ${f}`,
+    'result.youAsked': (q) => `You asked: ${q}`,
+    'toolbar.cardCount': (n) => `${n} ${n === 1 ? 'card' : 'cards'}`,
+    'toolbar.makeCards': (n) => `Make ${n === 1 ? 'a card' : `${n} cards`} on:`,
+    'toolbar.sentOff': (c, n) => `${c} parked in Blocked on ${n}. Nothing runs until you unblock them there.`,
+    'toolbar.sentOn': (c, n) => `${c} in Triage on ${n}. Hermes will split them into tasks and start working.`,
+    'top.belongs': (c) => `This board belongs to the work in "${c}". Hand to Hermes and Run ask before they start anything separate.`,
+    'top.deleteConfirm': (n) => `Delete "${n}"? This can't be undone.`,
+    'top.kanbanDrift': (n, b) => `${n} card${n === 1 ? ' has' : 's have'} moved or been added on the Kanban board ${b}`,
+    'top.kanbanLaidOut': (n) => `${n} cards laid out. It is a copy: changes here do not go back to Kanban.`,
+    'top.linkedUnheard': (n) => `This board is linked to a chat. ${n} change${n === 1 ? '' : 's'} here it has not heard yet`,
+    'top.pulledBack': (a, m) => `${a} added and ${m} moved. One undo puts it back.`,
+    'top.shareOff': (n) => `${n} change${n === 1 ? '' : 's'} you made here ${n === 1 ? 'has' : 'have'} not reached the chat. With "Chats can read my boards" on, they go along with your next message there.`,
+    'top.shareOn': (n) => `${n} change${n === 1 ? '' : 's'} you made here ${n === 1 ? 'goes' : 'go'} to the chat with your next message there.`,
+    'chip.checkedNow': ', checked while this page is open',
+    'compose.answering': 'answering',
+    'handoff.thisNote': 'this note',
+    'panel.fromChatPrefix': 'From a chat · ',
+    'result.modelTip': 'The model picked in Settings did this',
+    'top.aChat': 'a chat',
   },
   zh: {
     nav: '白板',
@@ -176,7 +349,180 @@ const MESSAGES = {
     'tone.sky': '天蓝',
     'tone.lilac': '丁香紫',
     'tone.paper': '纸白',
-    'group.newTitle': '未命名分组'
+    'group.newTitle': '未命名分组',
+    'activity.browsing': '浏览中',
+    'activity.starting': '启动中',
+    'ago.justNow': '刚刚',
+    'bullets.empty': '这份结果里没有可拆的内容。',
+    'bullets.point': '结果里的一个要点',
+    'changes.actionItem': '（行动项）',
+    'changes.added': '新增',
+    'changes.changedTo': '改为',
+    'changes.inBox': '改动已写进输入框，按回车发送。',
+    'chat.answerTip': '关联会话的回答。',
+    'chat.answered': '关联会话已回答',
+    'chat.workingTurn': '会话正在跑一轮。',
+    'chip.archived': '已归档',
+    'chip.askedTip': '这条已经提给关联会话，回答会作为建议回来。',
+    'chip.askedWorkingTip': '关联会话正在处理这条，回答会停在「建议」里。',
+    'chip.chatDone': '会话：完成',
+    'chip.chatOnIt': '会话在做',
+    'chip.chatWorking': '会话处理中',
+    'chip.onKanban': '已在看板',
+    'chip.open': '打开',
+    'compose.layingOut': '正在排版',
+    'error.closed': 'Hermes 在这件事完成前就关闭了。',
+    'error.noSession': 'Hermes 没有返回会话。',
+    'error.stopped': '已停止',
+    'export.asTable': '把白板导出成表格',
+    'handoff.ask': '在关联会话里提问',
+    'handoff.askNote': '打开会话并写好请求。由你发送，审批仍归那个会话。',
+    'handoff.copied': '请求已复制，粘贴到会话里发出去。',
+    'handoff.seated': '请求已写进输入框，按回车发送。',
+    'handoff.separate': '在这里另起一套活',
+    'handoff.separateNote': '新的 Hermes 代理在这块板上做，不通知那个会话。',
+    'kanbanBoards.loading': '正在向看板取列表…',
+    'kanbanBoards.open': '当前',
+    'kanbanBoards.pickNote': '先选一条有文字的便签。',
+    'kanbanBoards.startOffNote': '关闭：先停在「阻塞」，你不解除就什么都不跑。',
+    'kanbanBoards.startOnNote': '会进「待分派」。Hermes 拆成任务后，代理用你的模型直接开做。',
+    'model.hermesDefault': 'Hermes 默认',
+    'model.none': 'Hermes 没有列出你已登录的模型。',
+    'model.notListed': '（Hermes 当前未列出）',
+    'note.again': '再来一次',
+    'note.agentTip': 'Hermes 代理会把这个做掉，结果放回这里',
+    'note.retry': '重试',
+    'note.stop': '停止',
+    'note.waitingAgent': '等待空闲代理',
+    'notify.boardMade': 'Hermes 做好了一块白板',
+    'panel.hermesSuggests': 'Hermes 建议',
+    'picker.empty': '这个 Hermes 配置里还没有会话。',
+    'picker.intro': '把这块白板关联到正在干这件事的会话：',
+    'picker.loading': '正在向 Hermes 取会话列表…',
+    'plan.looseEnds': '收尾',
+    'plan.writingBrief': '正在写提纲',
+    'proposal.fromChat': '来自会话',
+    'result.data': '数据',
+    'result.sheets': '表格',
+    'result.unpack': '拆成便签',
+    'result.unpackTip': 'Hermes 会把它拆成便签和下一步，等你确认',
+    'result.unpacking': '正在拆解',
+    'stale.notesGone': '这些便签大多已经不在了。',
+    'status.blocked': '阻塞',
+    'status.delivered': '已交付',
+    'status.done': '完成',
+    'status.ready': '就绪',
+    'status.review': '待审',
+    'status.running': '进行中',
+    'status.todo': '待办',
+    'status.triage': '待分派',
+    'sticker.access': '通行',
+    'sticker.break': '休息',
+    'sticker.bug': '缺陷',
+    'sticker.build': '建造',
+    'sticker.calendar': '日历',
+    'sticker.delivery': '交付',
+    'sticker.docs': '文档',
+    'sticker.done': '勾',
+    'cursor.verb': (v) => `Hermes · ${v}`,
+    'cursor.stop': (i, n) => `Hermes · 第 ${i}/${n} 站`,
+    'cursor.answered': 'Hermes · 已回答',
+    'cursor.brief': 'Hermes · 正在写提纲',
+    'cursor.browsing': '浏览',
+    'cursor.delivered': 'Hermes · 已交付',
+    'cursor.reading': 'Hermes · 阅读中',
+    'cursor.searching': '检索',
+    'cursor.starting': 'Hermes · 启动中',
+    'cursor.thinking': 'Hermes · 思考中',
+    'cursor.working': '处理',
+
+    'sticker.flag': '旗子',
+    'sticker.gift': '礼物',
+    'sticker.growth': '增长',
+    'sticker.hermes': 'Hermes',
+    'sticker.idea': '点子',
+    'sticker.launch': '发布',
+    'sticker.love': '爱心',
+    'sticker.mail': '邮件',
+    'sticker.media': '媒体',
+    'sticker.money': '钱',
+    'sticker.people': '人',
+    'sticker.place': '地点',
+    'sticker.research': '调研',
+    'sticker.risk': '风险',
+    'sticker.rocket': '火箭',
+    'sticker.safety': '安全',
+    'sticker.sales': '销售',
+    'sticker.spark': '火花',
+    'sticker.star': '星星',
+    'sticker.talk': '对话',
+    'sticker.target': '靶心',
+    'sticker.time': '时间',
+    'sticker.travel': '出行',
+    'sticker.win': '胜利',
+    'suggest.answer': '回答',
+    'takeBack.already': '已经撤回过了。',
+    'takeBack.changed': '这之后有改动，改用撤销。',
+    'tidy.needNotes': '先放几条便签，Hermes 才有东西可分组。',
+    'toast.dismiss': '关闭',
+    'tool.hand': '交给 Hermes',
+    'top.agentHint': '负责干活：交给 Hermes、跑路线、提问。',
+    'top.agentModel': '执行模型',
+    'top.export': '导出',
+    'top.kanbanChanged': '看板有变更 · 刷新',
+    'top.kanbanIntro': '把看板排版成一块新白板：',
+    'top.linkedBoard': '这块白板关联了一个会话',
+    'top.linkedWorking': '关联会话正在处理',
+    'top.needNotes': '先放几条便签',
+    'top.planningHint': '负责排版、分组、拆解结果和写提纲。',
+    'top.planningModel': '规划模型',
+    'top.settings': '设置',
+    'top.tidyTip': 'Hermes 会给出分组、负责人和行动项建议，你逐条接受或跳过。',
+    'ago.days': (n) => `${n} 天前`,
+    'ago.hours': (n) => `${n} 小时前`,
+    'ago.minutes': (n) => `${n} 分钟前`,
+    'chat.linkedTo': (t) => `已关联「${t}」。`,
+    'chat.turnDone': (ago, said) => `上一轮在${ago}完成${said}`,
+    'chat.turnFailed': (ago) => `上一轮在${ago}失败了。`,
+    'chat.turnStopped': (ago) => `上一轮在${ago}被停止。`,
+    'chip.cardArchived': (i, b) => `卡片 ${i} 已经不在看板 ${b} 上，那边把它归档了。`,
+    'chip.cardTitle': (i, b, c) => `看板 ${b} 上的卡片 ${i}${c}`,
+    'chip.reported': (d) => `关联会话报了这个问题${d}。点一下清除。`,
+    'chip.reportedDetail': (d) => `：${d}`,
+    'compose.activity': (a) => ` · ${a}`,
+    'compose.working': (v, r, a) => `Hermes 正在${v}「${r}」${a}`,
+    'error.listModels': (e) => `Hermes 没取到模型列表：${e}`,
+    'error.maxSteps': (n) => `连续 ${n} 次工具调用没做完，已停止。`,
+    'error.noAnswer': (s) => `${s} 秒没有回应，已停止。`,
+    'error.save': (e) => `白板保存失败：${e}`,
+    'error.turnEnded': (s) => `这一轮以「${s}」结束。`,
+    'handoff.planItems': (n) => `这个计划里 ${n} 个待办项`,
+    'handoff.question': (c, w) => `「${c}」已经在做这件事。${w}要放到哪边？`,
+    'handoff.theseNotes': (n) => `这 ${n} 条便签`,
+    'plan.agents': (n) => ` · ${n} 个代理`,
+    'plan.intro': (n) => `Hermes 顺着白板一站一站走，代理依次做掉这 ${n} 个待办行动项，每一步都接在上一步的结果上`,
+    'plan.stopLine': (i, n, l, a) => `第 ${i}/${n} 站 · ${l}${a}`,
+    'result.doneBy': (m) => `执行者：${m}`,
+    'result.used': (f) => `用了 ${f}`,
+    'result.youAsked': (q) => `你的提问：${q}`,
+    'toolbar.cardCount': (n) => `${n} 张卡片`,
+    'toolbar.makeCards': (n) => `做成卡片，目标看板：`,
+    'toolbar.sentOff': (c, n) => `${c}先停在 ${n} 的「阻塞」。你不解除就什么都不跑。`,
+    'toolbar.sentOn': (c, n) => `${c}已放进 ${n} 的「待分派」。Hermes 会拆成任务后直接开做。`,
+    'top.belongs': (c) => `这块白板属于「${c}」那摊活。交给 Hermes 和跑路线动手前都会先问一句。`,
+    'top.deleteConfirm': (n) => `删除「${n}」？删了就没了。`,
+    'top.kanbanDrift': (n, b) => `看板 ${b} 上有 ${n} 张卡片移动或新增`,
+    'top.kanbanLaidOut': (n) => `已排好 ${n} 张卡片。这是副本：这里的改动不会回到看板。`,
+    'top.linkedUnheard': (n) => `这块白板关联了一个会话。这里有 ${n} 处改动它还没收到`,
+    'top.pulledBack': (a, m) => `新增 ${a} 处、移动 ${m} 处。撤销一次即可复原。`,
+    'top.shareOff': (n) => `你在这里改的 ${n} 处还没到会话。打开「会话可读我的白板」后，会随你在会话里的下一条消息一起过去。`,
+    'top.shareOn': (n) => `你在这里改的 ${n} 处，会随你在会话里的下一条消息一起过去。`,
+    'chip.checkedNow': '，打开本页期间已核对',
+    'compose.answering': '回答',
+    'handoff.thisNote': '这条便签',
+    'panel.fromChatPrefix': '来自会话 · ',
+    'result.modelTip': '这是「设置」里选定的模型做的',
+    'top.aChat': '一个会话',
   }
 }
 
@@ -369,7 +715,7 @@ function lastJsonObject(text, accept = () => true) {
 const STICKERS = {
   rocket: {
     hue: 8,
-    label: 'Rocket',
+    label: tr('sticker.rocket'),
     fill: ['M32 12c8 6 11 15 9 26H23c-2-11 1-20 9-26Z'],
     ink: [
       'M32 12c8 6 11 15 9 26H23c-2-11 1-20 9-26Z',
@@ -380,13 +726,13 @@ const STICKERS = {
   },
   flag: {
     hue: 152,
-    label: 'Flag',
+    label: tr('sticker.flag'),
     fill: ['M22 15c8-4 14 4 22 0v18c-8 4-14-4-22 0Z'],
     ink: ['M22 52V13', 'M22 15c8-4 14 4 22 0v18c-8 4-14-4-22 0']
   },
   calendar: {
     hue: 205,
-    label: 'Calendar',
+    label: tr('sticker.calendar'),
     fill: ['M15 22h34v26a4 4 0 0 1-4 4H19a4 4 0 0 1-4-4Z'],
     ink: [
       'M19 17h26a4 4 0 0 1 4 4v27a4 4 0 0 1-4 4H19a4 4 0 0 1-4-4V21a4 4 0 0 1 4-4Z',
@@ -397,7 +743,7 @@ const STICKERS = {
   },
   bulb: {
     hue: 46,
-    label: 'Idea',
+    label: tr('sticker.idea'),
     fill: ['M32 12a13 13 0 0 1 8 23c-2 2-3 4-3 7H27c0-3-1-5-3-7a13 13 0 0 1 8-23Z'],
     ink: [
       'M32 12a13 13 0 0 1 8 23c-2 2-3 4-3 7H27c0-3-1-5-3-7a13 13 0 0 1 8-23Z',
@@ -407,13 +753,13 @@ const STICKERS = {
   },
   target: {
     hue: 350,
-    label: 'Target',
+    label: tr('sticker.target'),
     fill: ['M32 14a18 18 0 1 0 0.1 0Z'],
     ink: ['M32 14a18 18 0 1 0 0.1 0', 'M32 22a10 10 0 1 0 0.1 0', 'M32 29a3 3 0 1 0 0.1 0', 'M32 32L50 14M44 14h6v6']
   },
   coins: {
     hue: 42,
-    label: 'Money',
+    label: tr('sticker.money'),
     fill: ['M20 26c0-3 5-5 12-5s12 2 12 5v16c0 3-5 5-12 5s-12-2-12-5Z'],
     ink: [
       'M20 26c0 3 5 5 12 5s12-2 12-5-5-5-12-5-12 2-12 5Z',
@@ -423,55 +769,55 @@ const STICKERS = {
   },
   truck: {
     hue: 205,
-    label: 'Delivery',
+    label: tr('sticker.delivery'),
     fill: ['M12 22h24v18H12Z', 'M36 28h9l6 6v6H36Z'],
     ink: ['M12 22h24v18H12Z', 'M36 28h9l6 6v6H36', 'M22 44a4 4 0 1 0 0.1 0M44 44a4 4 0 1 0 0.1 0', 'M39 31h5l3 3h-8Z']
   },
   mail: {
     hue: 14,
-    label: 'Mail',
+    label: tr('sticker.mail'),
     fill: ['M14 20h36v26H14Z'],
     ink: ['M17 20h30a3 3 0 0 1 3 3v20a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3V23a3 3 0 0 1 3-3Z', 'M15 22l17 13 17-13']
   },
   search: {
     hue: 172,
-    label: 'Research',
+    label: tr('sticker.research'),
     fill: ['M28 14a13 13 0 1 0 0.1 0Z'],
     ink: ['M28 14a13 13 0 1 0 0.1 0', 'M37 37l12 12', 'M22 25c1-3 3-5 6-5']
   },
   warning: {
     hue: 30,
-    label: 'Risk',
+    label: tr('sticker.risk'),
     fill: ['M32 13l20 35H12Z'],
     ink: ['M30 14.5a2.3 2.3 0 0 1 4 0l18 31a2.3 2.3 0 0 1-2 3.5H14a2.3 2.3 0 0 1-2-3.5Z', 'M32 26v11', 'M32 43v1']
   },
   heart: {
     hue: 350,
-    label: 'Love',
+    label: tr('sticker.love'),
     fill: ['M32 49C16 39 13 30 15 24c3-8 13-9 17-2 4-7 14-6 17 2 2 6-1 15-17 25Z'],
     ink: ['M32 49C16 39 13 30 15 24c3-8 13-9 17-2 4-7 14-6 17 2 2 6-1 15-17 25Z', 'M21 26c1-3 3-4 5-4']
   },
   star: {
     hue: 46,
-    label: 'Star',
+    label: tr('sticker.star'),
     fill: ['M32 12l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2Z'],
     ink: ['M32 12l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2Z']
   },
   check: {
     hue: 145,
-    label: 'Done',
+    label: tr('sticker.done'),
     fill: ['M32 13a19 19 0 1 0 0.1 0Z'],
     ink: ['M32 13a19 19 0 1 0 0.1 0', 'M23 33l7 7 12-15']
   },
   clock: {
     hue: 220,
-    label: 'Time',
+    label: tr('sticker.time'),
     fill: ['M32 13a19 19 0 1 0 0.1 0Z'],
     ink: ['M32 13a19 19 0 1 0 0.1 0', 'M32 21v12l8 5', 'M32 15v3M50 32h-3M32 50v-3M14 32h3']
   },
   people: {
     hue: 266,
-    label: 'People',
+    label: tr('sticker.people'),
     fill: ['M14 48c0-8 6-13 12-13s12 5 12 13Z', 'M30 46c1-7 6-11 11-11s11 4 11 11Z'],
     ink: [
       'M26 22a6 6 0 1 0 0.1 0',
@@ -482,13 +828,13 @@ const STICKERS = {
   },
   chart: {
     hue: 152,
-    label: 'Growth',
+    label: tr('sticker.growth'),
     fill: ['M16 38h7v12h-7Z', 'M28 30h7v20h-7Z', 'M40 22h7v28h-7Z'],
     ink: ['M16 38h7v12h-7ZM28 30h7v20h-7ZM40 22h7v28h-7Z', 'M14 27l12-9 8 5 14-11', 'M42 12h6v6']
   },
   gear: {
     hue: 220,
-    label: 'Build',
+    label: tr('sticker.build'),
     fill: ['M32 16l4 1 2-3 5 3-1 4 3 3 4-1 3 5-3 2 1 4-1 4 3 2-3 5-4-1-3 3 1 4-5 3-2-3-4 1-4-1-2 3-5-3 1-4-3-3-4 1-3-5 3-2-1-4 1-4-3-2 3-5 4 1 3-3-1-4 5-3 2 3Z'],
     ink: [
       'M32 16l4 1 2-3 5 3-1 4 3 3 4-1 3 5-3 2 1 4-1 4 3 2-3 5-4-1-3 3 1 4-5 3-2-3-4 1-4-1-2 3-5-3 1-4-3-3-4 1-3-5 3-2-1-4 1-4-3-2 3-5 4 1 3-3-1-4 5-3 2 3Z',
@@ -497,7 +843,7 @@ const STICKERS = {
   },
   trophy: {
     hue: 42,
-    label: 'Win',
+    label: tr('sticker.win'),
     fill: ['M22 14h20v10a10 10 0 0 1-20 0Z'],
     ink: [
       'M22 14h20v10a10 10 0 0 1-20 0Z',
@@ -507,13 +853,13 @@ const STICKERS = {
   },
   pin: {
     hue: 8,
-    label: 'Place',
+    label: tr('sticker.place'),
     fill: ['M32 51C22 39 18 32 18 26a14 14 0 0 1 28 0c0 6-4 13-14 25Z'],
     ink: ['M32 51C22 39 18 32 18 26a14 14 0 0 1 28 0c0 6-4 13-14 25Z', 'M32 21a5 5 0 1 0 0.1 0']
   },
   coffee: {
     hue: 24,
-    label: 'Break',
+    label: tr('sticker.break'),
     fill: ['M16 26h28v12a12 12 0 0 1-12 12h-4a12 12 0 0 1-12-12Z'],
     ink: [
       'M16 26h28v12a12 12 0 0 1-12 12h-4a12 12 0 0 1-12-12Z',
@@ -523,7 +869,7 @@ const STICKERS = {
   },
   bug: {
     hue: 145,
-    label: 'Bug',
+    label: tr('sticker.bug'),
     fill: ['M32 22c7 0 11 6 11 14s-4 14-11 14-11-6-11-14 4-14 11-14Z'],
     ink: [
       'M32 22c7 0 11 6 11 14s-4 14-11 14-11-6-11-14 4-14 11-14Z',
@@ -534,19 +880,19 @@ const STICKERS = {
   },
   gift: {
     hue: 330,
-    label: 'Gift',
+    label: tr('sticker.gift'),
     fill: ['M15 27h34v8H15Z', 'M18 35h28v15H18Z'],
     ink: ['M15 27h34v8H15ZM18 35h28v15H18Z', 'M32 27v23', 'M32 27c-4-1-10-4-8-8s7 2 8 8c1-6 6-12 8-8s-4 7-8 8']
   },
   megaphone: {
     hue: 8,
-    label: 'Launch',
+    label: tr('sticker.launch'),
     fill: ['M16 28l26-12v32L16 36Z'],
     ink: ['M16 28l26-12v32L16 36Z', 'M16 28h-3v8h3', 'M22 38l3 10h5l-2-9', 'M47 26c2 2 2 6 0 8M50 22c4 4 4 12 0 16']
   },
   sandal: {
     hue: 41,
-    label: 'Hermes',
+    label: tr('sticker.hermes'),
     fill: ['M15 42c0-12 9-22 22-25 7-2 12 0 14 2-6 1-10 3-13 6 6-1 11 0 13 2-6 1-10 3-12 6 5 0 9 1 11 3-7 2-12 5-17 8-6 4-12 4-18-2Z'],
     ink: [
       'M15 42c0-12 9-22 22-25 7-2 12 0 14 2-6 1-10 3-13 6 6-1 11 0 13 2-6 1-10 3-12 6 5 0 9 1 11 3-7 2-12 5-17 8-6 4-12 4-18-2Z',
@@ -555,49 +901,49 @@ const STICKERS = {
   },
   chat: {
     hue: 205,
-    label: 'Talk',
+    label: tr('sticker.talk'),
     fill: ['M14 18h36v22H30l-10 9v-9h-6Z'],
     ink: ['M17 18h30a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H30l-10 9v-9h-3a3 3 0 0 1-3-3V21a3 3 0 0 1 3-3Z', 'M22 26h20M22 32h12']
   },
   plane: {
     hue: 205,
-    label: 'Travel',
+    label: tr('sticker.travel'),
     fill: ['M10 30l44-18-14 40-10-14Z'],
     ink: ['M10 30l44-18-14 40-10-14Z', 'M54 12L30 38M30 38v12l7-8']
   },
   camera: {
     hue: 266,
-    label: 'Media',
+    label: tr('sticker.media'),
     fill: ['M12 22h40v26H12Z'],
     ink: ['M16 22h6l3-5h14l3 5h6a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4Z', 'M32 28a7 7 0 1 0 0.1 0']
   },
   book: {
     hue: 14,
-    label: 'Docs',
+    label: tr('sticker.docs'),
     fill: ['M12 18c7-3 14-3 20 1v30c-6-4-13-4-20-1Z', 'M52 18c-7-3-14-3-20 1v30c6-4 13-4 20-1Z'],
     ink: ['M12 18c7-3 14-3 20 1v30c-6-4-13-4-20-1Z', 'M52 18c-7-3-14-3-20 1v30c6-4 13-4 20-1Z', 'M17 27c3-1 7-1 10 0M17 34c3-1 7-1 10 0M37 27c3-1 7-1 10 0']
   },
   cart: {
     hue: 152,
-    label: 'Sales',
+    label: tr('sticker.sales'),
     fill: ['M18 22h32l-4 16H22Z'],
     ink: ['M10 16h5l7 22h24l4-16H18', 'M25 46a3 3 0 1 0 0.1 0M43 46a3 3 0 1 0 0.1 0']
   },
   shield: {
     hue: 220,
-    label: 'Safety',
+    label: tr('sticker.safety'),
     fill: ['M32 12l18 6v12c0 11-7 18-18 22-11-4-18-11-18-22V18Z'],
     ink: ['M32 12l18 6v12c0 11-7 18-18 22-11-4-18-11-18-22V18Z', 'M24 31l6 6 10-12']
   },
   key: {
     hue: 42,
-    label: 'Access',
+    label: tr('sticker.access'),
     fill: ['M22 24a9 9 0 1 0 0.1 0Z'],
     ink: ['M22 24a9 9 0 1 0 0.1 0', 'M31 33h21M45 33v7M51 33v5']
   },
   spark: {
     hue: 266,
-    label: 'Spark',
+    label: tr('sticker.spark'),
     fill: ['M32 12c2 11 6 16 17 18-11 2-15 7-17 18-2-11-6-16-17-18 11-2 15-7 17-18Z'],
     ink: ['M32 12c2 11 6 16 17 18-11 2-15 7-17 18-2-11-6-16-17-18 11-2 15-7 17-18Z', 'M48 44c1 3 2 4 5 5-3 1-4 2-5 5-1-3-2-4-5-5 3-1 4-2 5-5Z']
   }
@@ -699,7 +1045,7 @@ function restoreBoard(value, fallbackId) {
     .map(item => {
       // A run that was going when Hermes closed cannot finish now.
       if (item.run && item.run.state === 'running') {
-        return { ...item, run: { ...item.run, activity: '', error: 'Hermes closed before this finished.', state: 'stopped' } }
+        return { ...item, run: { ...item.run, activity: '', error: tr('error.closed'), state: 'stopped' } }
       }
 
       return item
@@ -743,7 +1089,7 @@ function writeNow() {
     storage.set(boardKey(board.id), board)
     storage.set(INDEX_KEY, $index.get())
   } catch (error) {
-    $toast.set({ kind: 'error', text: `Whiteboard could not save: ${error instanceof Error ? error.message : String(error)}` })
+    $toast.set({ kind: 'error', text: tr('error.save', error instanceof Error ? error.message : String(error)) })
   }
 }
 
@@ -1566,7 +1912,7 @@ function staleReason(board, item) {
   if (item.kind === 'group') {
     const live = item.noteIds.filter(id => lookup.get(id)?.kind === 'note')
 
-    return live.length < 2 ? 'Most of these notes are gone.' : ''
+    return live.length < 2 ? tr('stale.notesGone') : ''
   }
 
   if (item.kind === 'owner' || item.kind === 'result') {
@@ -1630,7 +1976,7 @@ function applyProposalItem(board, item) {
     const text = String(item.text || '')
     const h = clamp(96 + (Math.ceil(text.length / 44) + text.split('\n').length) * 15, 150, 420)
     const spot = freeSpot({ ...board, items }, 300, h, { x: note.x + note.w + 48, y: note.y - 8 })
-    const card = { by: 'chat', for: note.id, h, id: uid('d'), kind: 'result', rev: rev(), sources: [], stamp: 'From chat', steps: 0, text, title: item.title || clean(text, 60), w: 300, x: spot.x, y: spot.y }
+    const card = { by: 'chat', for: note.id, h, id: uid('d'), kind: 'result', rev: rev(), sources: [], stamp: tr('proposal.fromChat'), steps: 0, text, title: item.title || clean(text, 60), w: 300, x: spot.x, y: spot.y }
     const link = { from: note.id, id: uid('l'), kind: 'result', to: card.id }
 
     items = [...items, card]
@@ -1714,10 +2060,10 @@ function takeBackState(board, receipt) {
   const touched = Object.entries(receipt.after || {}).filter(([id, revision]) => lookup.get(id)?.rev !== revision)
 
   if (receipt.undone) {
-    return { ok: false, reason: 'Already taken back.' }
+    return { ok: false, reason: tr('takeBack.already') }
   }
 
-  return touched.length > 0 ? { ok: false, reason: 'Something changed these since. Use undo instead.' } : { ok: true, reason: '' }
+  return touched.length > 0 ? { ok: false, reason: tr('takeBack.changed') } : { ok: true, reason: '' }
 }
 
 function takeBackReceipt(board, receipt) {
@@ -1889,7 +2235,7 @@ const VERBS = {
   execute_code: 'Running code',
   read_file: 'Reading',
   search_files: 'Searching files',
-  terminal: 'Running',
+  terminal: tr('status.running'),
   web_extract: 'Reading',
   web_search: 'Searching'
 }
@@ -1897,7 +2243,7 @@ const VERBS = {
 function activityOf(payload) {
   const name = String(payload?.name ?? payload?.tool_name ?? '').trim()
   const args = payload?.args && typeof payload.args === 'object' ? payload.args : {}
-  const verb = VERBS[name] || (name.startsWith('browser_') ? 'Browsing' : name ? `Using ${name}` : 'Working')
+  const verb = VERBS[name] || (name.startsWith('browser_') ? tr('activity.browsing') : name ? `Using ${name}` : 'Working')
   const urls = Array.isArray(args.urls) ? args.urls : args.url ? [args.url] : []
   const target = urls.length > 0 ? urls.map(hostOf).filter(Boolean).join(', ') : String(args.query ?? '').trim()
 
@@ -1942,9 +2288,9 @@ async function loadModelOptions() {
       .filter(entry => entry.models.length > 0)
       .slice(0, 30)
 
-    $modelOptions.set({ error: providers.length === 0 ? 'Hermes listed no models you are signed in to.' : '', loading: false, providers })
+    $modelOptions.set({ error: providers.length === 0 ? tr('model.none') : '', loading: false, providers })
   } catch (error) {
-    $modelOptions.set({ error: `Hermes could not list your models: ${errorText(error)}`, loading: false, providers: [] })
+    $modelOptions.set({ error: tr('error.listModels', errorText(error)), loading: false, providers: [] })
   }
 }
 
@@ -1989,7 +2335,7 @@ async function createHiddenSession(title, choice = null, role = 'agent') {
   }
 
   if (!created?.session_id) {
-    throw new Error('Hermes did not return a session.')
+    throw new Error(tr('error.noSession'))
   }
 
   await host.request('session.set_hidden', { hidden: true, session_id: created.session_id })
@@ -2005,7 +2351,7 @@ async function runSession({ maxMs, maxSteps, onActivity, role = 'agent', text, t
   const sid = created?.session_id
 
   if (!sid) {
-    throw new Error('Hermes did not return a session.')
+    throw new Error(tr('error.noSession'))
   }
 
   const state = { flags: new Set(), steps: 0, storedSessionId: created.stored_session_id || sid, visited: [] }
@@ -2053,7 +2399,7 @@ async function runSession({ maxMs, maxSteps, onActivity, role = 'agent', text, t
 
       if (state.steps > maxSteps) {
         interrupt()
-        finish(new Error(`Stopped after ${maxSteps} tool calls without finishing.`))
+        finish(new Error(tr('error.maxSteps', maxSteps)))
       }
     })
   )
@@ -2092,7 +2438,7 @@ async function runSession({ maxMs, maxSteps, onActivity, role = 'agent', text, t
       const reply = String(payload.text ?? payload.content ?? '')
 
       if (/interrupt|cancel|fail|error/i.test(status) && !reply.trim()) {
-        finish(new Error(`The turn ended as ${status}.`))
+        finish(new Error(tr('error.turnEnded', status)))
       } else if (reply.trim()) {
         finish(null, reply)
       } else {
@@ -2123,7 +2469,7 @@ async function runSession({ maxMs, maxSteps, onActivity, role = 'agent', text, t
 
     if (Date.now() > deadline) {
       interrupt()
-      finish(new Error(`No answer after ${Math.round(maxMs / 1000)} seconds, so it was stopped.`))
+      finish(new Error(tr('error.noAnswer', Math.round(maxMs / 1000))))
 
       return
     }
@@ -2178,7 +2524,7 @@ async function tour(ids, pause = 260) {
     const item = lookup.get(id)
 
     if (item) {
-      setCursor('hermes', { hue: HERMES_HUE, label: 'Hermes', x: item.x + item.w * 0.7, y: item.y + item.h * 0.55 })
+      setCursor('hermes', { hue: HERMES_HUE, label: tr('sticker.hermes'), x: item.x + item.w * 0.7, y: item.y + item.h * 0.55 })
       await wait(pause)
     }
   }
@@ -2264,7 +2610,7 @@ async function buildFromSentence(request, layout) {
 
   composeToken = token
   $compose.set({ activity: 'Thinking it through', busy: true, error: '', request: text, steps: 0 })
-  setCursor('hermes', { hue: HERMES_HUE, label: 'Hermes · thinking', ...viewCenter() })
+  setCursor('hermes', { hue: HERMES_HUE, label: tr('cursor.thinking'), ...viewCenter() })
 
   try {
     const run = await runSession({
@@ -2340,7 +2686,7 @@ async function placeSpec(spec) {
       fitView(around(item), true, 1)
     }
 
-    setCursor('hermes', { hue: HERMES_HUE, label: 'Hermes', x: item.x + item.w * 0.75, y: item.y + item.h * 0.6 })
+    setCursor('hermes', { hue: HERMES_HUE, label: tr('sticker.hermes'), x: item.x + item.w * 0.75, y: item.y + item.h * 0.6 })
     await wait(item.kind === 'note' ? 130 : follow ? 360 : 220)
     placed.add(item.id)
 
@@ -2403,7 +2749,7 @@ async function tidyNotes() {
   const notes = board.items.filter(item => item.kind === 'note' && clean(item.text, 10)).slice(0, 80)
 
   if (notes.length < 2 || $tidy.get().busy) {
-    $tidy.set({ busy: false, error: notes.length < 2 ? 'Add a few notes first. Hermes groups what is on the board.' : '' })
+    $tidy.set({ busy: false, error: notes.length < 2 ? tr('tidy.needNotes') : '' })
 
     return false
   }
@@ -2568,7 +2914,7 @@ function handToHermes(noteId) {
   }
 
   if (runCount() >= AGENT_CONCURRENCY) {
-    setRun(noteId, { activity: 'Waiting for a free agent', state: 'queued' })
+    setRun(noteId, { activity: tr('note.waitingAgent'), state: 'queued' })
     queue.push(noteId)
 
     return true
@@ -2610,7 +2956,7 @@ let agentSeq = 0
 function cursorVerb(activity) {
   const word = String(activity || '').split(' ')[0].toLowerCase()
 
-  return { browsing: 'browsing', looking: 'reading', opening: 'browsing', reading: 'reading', searching: 'searching' }[word] || 'working'
+  return { browsing: tr('cursor.browsing'), looking: tr('cursor.reading'), opening: tr('cursor.browsing'), reading: tr('cursor.reading'), searching: tr('cursor.searching') }[word] || tr('cursor.working')
 }
 
 async function runAgent(noteId, extra = {}) {
@@ -2632,10 +2978,10 @@ async function runAgent(noteId, extra = {}) {
 
   agentSeq += 1
   runTokens.set(noteId, token)
-  setRun(noteId, { activity: 'Starting', hue, startedAt: Date.now(), state: 'running', steps: 0 })
-  setCursor(cursorId, { hue, label: 'Hermes · starting', ...viewCenter() })
+  setRun(noteId, { activity: tr('activity.starting'), hue, startedAt: Date.now(), state: 'running', steps: 0 })
+  setCursor(cursorId, { hue, label: tr('cursor.starting'), ...viewCenter() })
   await wait(60)
-  setCursor(cursorId, { hue, label: 'Hermes · starting', ...park() })
+  setCursor(cursorId, { hue, label: tr('cursor.starting'), ...park() })
 
   try {
     const run = await runSession({
@@ -2643,7 +2989,7 @@ async function runAgent(noteId, extra = {}) {
       maxSteps: AGENT_MAX_STEPS,
       onActivity: (activity, steps) => {
         setRun(noteId, { activity, steps })
-        setCursor(cursorId, { label: `Hermes · ${cursorVerb(activity)}`, ...park() })
+        setCursor(cursorId, { label: tr('cursor.verb', cursorVerb(activity)), ...park() })
       },
       role: 'agent',
       text: runBrief(board, note, extra.context),
@@ -2724,7 +3070,7 @@ function deliverResult(noteId, result, cursorId) {
     flags: result.flags?.length ? result.flags : undefined,
     for: noteId,
     model: result.model || undefined,
-    stamp: 'Delivered',
+    stamp: tr('status.delivered'),
     h,
     id: uid('d'),
     kind: 'result',
@@ -2739,7 +3085,7 @@ function deliverResult(noteId, result, cursorId) {
     y: spot.y
   }
 
-  setCursor(cursorId, { label: 'Hermes · delivered', x: card.x + card.w * 0.6, y: card.y + 24 })
+  setCursor(cursorId, { label: tr('cursor.delivered'), x: card.x + card.w * 0.6, y: card.y + 24 })
   setBoard({
     ...without,
     items: liftTitle([...without.items, card].map(item => (item.id === noteId ? { ...item, rev: rev(), status: 'delivered' } : item))),
@@ -2827,11 +3173,11 @@ async function runPlan() {
       const section = stops[index].section ? lookup.get(stops[index].section.id) : null
       const notes = stops[index].notes.filter(note => lookup.has(note.id))
 
-      $plan.set({ active: true, index, label: section ? section.title : 'Loose ends', total: stops.length, working: notes.length })
+      $plan.set({ active: true, index, label: section ? section.title : tr('plan.looseEnds'), total: stops.length, working: notes.length })
 
       if (section) {
         fitView(boundsOf(sectionItems(board, section)), true, 0.92)
-        setCursor('hermes', { hue: HERMES_HUE, label: `Hermes · stop ${index + 1} of ${stops.length}`, x: section.x + section.w * 0.5, y: section.y + section.h * 0.5 })
+        setCursor('hermes', { hue: HERMES_HUE, label: tr('cursor.stop', index + 1, stops.length), x: section.x + section.w * 0.5, y: section.y + section.h * 0.5 })
         await wait(notes.length > 0 ? 900 : 650)
       }
 
@@ -2862,7 +3208,7 @@ async function runPlan() {
     }
 
     if (!token.cancelled && delivered.length > 0 && $board.get().id === start.id) {
-      $plan.set({ ...$plan.get(), label: 'Writing the brief', working: 1, wrapping: true })
+      $plan.set({ ...$plan.get(), label: tr('plan.writingBrief'), working: 1, wrapping: true })
       await deliverBrief(delivered, token)
     }
 
@@ -2892,7 +3238,7 @@ async function deliverBrief(delivered, token) {
   const last = sectionsOf(before).at(-1)
 
   if (last) {
-    setCursor('hermes', { hue: HERMES_HUE, label: 'Hermes · writing the brief', x: last.x + last.w + 160, y: last.y + last.h / 2 })
+    setCursor('hermes', { hue: HERMES_HUE, label: tr('cursor.brief'), x: last.x + last.w + 160, y: last.y + last.h / 2 })
   }
 
   let parsed = null
@@ -2952,7 +3298,7 @@ async function deliverBrief(delivered, token) {
     items: [...without.items, card],
     links: anchor ? [...without.links, { from: anchor.id, id: uid('l'), kind: 'result', to: card.id }] : without.links
   })
-  setCursor('hermes', { hue: HERMES_HUE, label: 'Hermes · delivered', x: card.x + card.w * 0.6, y: card.y + 30 })
+  setCursor('hermes', { hue: HERMES_HUE, label: tr('cursor.delivered'), x: card.x + card.w * 0.6, y: card.y + 30 })
   await wait(500)
   fitView(boundsOf($board.get().items), true, 1)
 
@@ -3033,7 +3379,7 @@ async function askHermes(question, ids) {
 
   composeToken = token
   $compose.set({ activity: '', asking: true, busy: true, error: '', request: text, steps: 0 })
-  setCursor('hermes', { hue: HERMES_HUE, label: 'Hermes · reading', x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 })
+  setCursor('hermes', { hue: HERMES_HUE, label: tr('cursor.reading'), x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 })
 
   try {
     const run = await runSession({
@@ -3041,7 +3387,7 @@ async function askHermes(question, ids) {
       maxSteps: 12,
       onActivity: (activity, steps) => {
         $compose.set({ ...$compose.get(), activity, steps })
-        setCursor('hermes', { label: `Hermes · ${cursorVerb(activity)}` })
+        setCursor('hermes', { label: tr('cursor.verb', cursorVerb(activity)) })
       },
       role: 'agent',
       text: askPrompt(board, scope, text),
@@ -3070,7 +3416,7 @@ async function askHermes(question, ids) {
       question: text,
       rev: rev(),
       sources: parsed.sources.length > 0 ? parsed.sources : run.visited.slice(0, MAX_SOURCES),
-      stamp: 'Answer',
+      stamp: tr('suggest.answer'),
       text: parsed.text,
       title: parsed.headline,
       w: 320,
@@ -3079,7 +3425,7 @@ async function askHermes(question, ids) {
     }
     const extra = suggestedNotes(value, anchor.id)
 
-    setCursor('hermes', { label: 'Hermes · answered', x: card.x + card.w * 0.6, y: card.y + 24 })
+    setCursor('hermes', { label: tr('cursor.answered'), x: card.x + card.w * 0.6, y: card.y + 24 })
     setBoard({
       ...current,
       items: [...current.items, card],
@@ -3159,13 +3505,13 @@ Two to five notes. Mark "action": true on the ones that are a concrete next step
   }
 
   if (items.length === 0) {
-    items = bulletsOf(card.text).map(text => ({ from, id: uid('pi'), kind: 'note', reason: 'A point of the result', state: 'pending', text }))
+    items = bulletsOf(card.text).map(text => ({ from, id: uid('pi'), kind: 'note', reason: tr('bullets.point'), state: 'pending', text }))
   }
 
   $unpacking.set($unpacking.get().filter(id => id !== cardId))
 
   if (items.length === 0) {
-    $toast.set({ kind: 'info', text: 'There was nothing in that result to unpack.' })
+    $toast.set({ kind: 'info', text: tr('bullets.empty') })
 
     return false
   }
@@ -3430,7 +3776,7 @@ async function askLinkedChat(noteIds) {
   }
 
   if (notes.length === 0) {
-    throw new Error('Pick a note with some text on it first.')
+    throw new Error(tr('kanbanBoards.pickNote'))
   }
 
   const how = await seatInChat(board.chat.id, chatRequest(board, notes, $chatSharing.get()))
@@ -3554,8 +3900,8 @@ async function finishAsk(ask, payload) {
   const many = ask.noteIds.length > 1
   const headline = clean(text.split('\n').find(line => line.trim())?.replace(/^[#>*\-\s]+/, '').replace(/[*_`]/g, ''), 80)
   const proposal = chatProposal({
-    results: [{ headline, note: note.id, noteText: clean(note.text, 80), reason: many ? `One answer from the linked chat for the ${ask.noteIds.length} items you sent.` : 'The answer from the linked chat.', text }],
-    summary: 'The linked chat answered'
+    results: [{ headline, note: note.id, noteText: clean(note.text, 80), reason: many ? `One answer from the linked chat for the ${ask.noteIds.length} items you sent.` : tr('chat.answerTip'), text }],
+    summary: tr('chat.answered')
   })
 
   if (!proposal) {
@@ -3571,7 +3917,7 @@ async function finishAsk(ask, payload) {
 
   host.notify?.({
     action: {
-      label: 'Open',
+      label: tr('chip.open'),
       onClick: () => {
         host.navigate(ROUTE)
         switchBoard(boardNow.id)
@@ -3581,7 +3927,7 @@ async function finishAsk(ask, payload) {
     durationMs: 15000,
     kind: 'success',
     message: `Its answer is waiting under Suggestions on ${clean(boardNow.name, 50)}.`,
-    title: 'The linked chat answered'
+    title: tr('chat.answered')
   })
 
   return 'taken'
@@ -3642,7 +3988,7 @@ function watchLinkedChat() {
 // is how a board follows work that began in the chat, not on the board.
 const $chatActivity = atom({})
 const WORKING_TTL_MS = 30 * 60 * 1000
-const PROGRESS = { blocked: 'Blocked', doing: 'Chat is on it', done: 'Chat: done' }
+const PROGRESS = { blocked: tr('status.blocked'), doing: tr('chip.chatOnIt'), done: tr('chip.chatDone') }
 const TURN_STATES = new Set(['working', 'done', 'failed', 'stopped'])
 const heardTo = new Map()
 
@@ -3803,9 +4149,9 @@ function clearProgress(id) {
 /** What Tell the chat now writes: the changes the chat has not heard yet. */
 function changesRequest(board, changes) {
   const line = change => {
-    const extra = `${change.owner ? ` (owner: ${change.owner})` : ''}${change.due ? ` (due: ${change.due})` : ''}${change.action ? ' (action item)' : ''}`
+    const extra = `${change.owner ? ` (owner: ${change.owner})` : ''}${change.due ? ` (due: ${change.due})` : ''}${change.action ? tr('changes.actionItem') : ''}`
 
-    return change.kind === 'removed' ? `- Removed: ${change.text}` : `- ${change.kind === 'added' ? 'Added' : 'Changed to'}: ${change.text}${extra}`
+    return change.kind === 'removed' ? `- Removed: ${change.text}` : `- ${change.kind === 'added' ? tr('changes.added') : tr('changes.changedTo')}: ${change.text}${extra}`
   }
 
   return [chatMarker(board), 'I changed the board. Please take these into account and tell me if any of them changes the plan:', changes.map(line).join('\n')].join('\n\n')
@@ -3829,13 +4175,13 @@ async function tellChat() {
     setBoard({ ...now }, { changes: (now.changes || []).filter(change => change.at > last), log: false, undo: false })
   }
 
-  return how === 'seated' ? 'The changes are in the message box. Press Enter to send them.' : 'The changes are copied. Paste them into the chat.'
+  return how === 'seated' ? tr('changes.inBox') : 'The changes are copied. Paste them into the chat.'
 }
 
 function agoText(at) {
   const minutes = Math.max(0, Math.round((Date.now() - at) / 60000))
 
-  return minutes < 1 ? 'just now' : minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.round(minutes / 60)} h ago` : `${Math.round(minutes / 1440)} d ago`
+  return minutes < 1 ? tr('ago.justNow') : minutes < 60 ? tr('ago.minutes', minutes) : minutes < 1440 ? tr('ago.hours', Math.round(minutes / 60)) : tr('ago.days', Math.round(minutes / 1440))
 }
 
 const chatIsWorking = turn => turn?.state === 'working' && Date.now() - turn.at < WORKING_TTL_MS
@@ -3847,12 +4193,12 @@ function turnLine(turn) {
   }
 
   if (turn.state === 'working') {
-    return chatIsWorking(turn) ? 'The chat is working on a turn now.' : ''
+    return chatIsWorking(turn) ? tr('chat.workingTurn') : ''
   }
 
   const said = turn.headline ? `: "${turn.headline}"` : '.'
 
-  return turn.state === 'done' ? `Its last turn finished ${agoText(turn.at)}${said}` : turn.state === 'failed' ? `Its last turn failed ${agoText(turn.at)}.` : `Its last turn was stopped ${agoText(turn.at)}.`
+  return turn.state === 'done' ? tr('chat.turnDone', agoText(turn.at), said) : turn.state === 'failed' ? tr('chat.turnFailed', agoText(turn.at)) : tr('chat.turnStopped', agoText(turn.at))
 }
 
 /** Hand to Hermes, from a click. A linked board asks where the work should go. */
@@ -3939,7 +4285,7 @@ async function sendToKanban(noteIds, slug, start = false) {
   const notes = noteIds.map(id => lookup.get(id)).filter(item => item?.kind === 'note' && String(item.text || '').trim())
 
   if (notes.length === 0) {
-    throw new Error('Pick a note with some text on it first.')
+    throw new Error(tr('kanbanBoards.pickNote'))
   }
 
   if (notes.length > KANBAN_MAX) {
@@ -4202,7 +4548,7 @@ function takeChatEntry(entry) {
     storage?.set(INDEX_KEY, $index.get())
     host.notify?.({
       action: {
-        label: 'Open',
+        label: tr('chip.open'),
         onClick: () => {
           host.navigate(ROUTE)
           switchBoard(board.id)
@@ -4211,7 +4557,7 @@ function takeChatEntry(entry) {
       durationMs: 15000,
       kind: 'success',
       message: `${spec.title}: ${spec.sections.length} sections`,
-      title: 'Hermes made a board'
+      title: tr('notify.boardMade')
     })
 
     return 'taken'
@@ -4259,7 +4605,7 @@ function takeChatEntry(entry) {
 
 const SUITE_HELLO = 'hermes-suite:hello'
 const SUITE_NOTES = 'hermes-suite:notes'
-const SUITE_FROM = { data: 'Data', sheets: 'Sheets' }
+const SUITE_FROM = { data: tr('result.data'), sheets: tr('result.sheets') }
 const SUITE_MAX_NOTES = 24
 
 /** Notes another suite page sent, as one group on the open board. Returns the
@@ -4465,7 +4811,7 @@ async function exportBoard(kind = 'md') {
   const path = await pluginOs.pickSavePath({
     defaultPath: `${fileSlug(board.name)}.${csv ? 'csv' : 'md'}`,
     filters: [csv ? { extensions: ['csv'], name: 'CSV' } : { extensions: ['md'], name: 'Markdown' }],
-    title: csv ? 'Export board as a table' : 'Export board'
+    title: csv ? tr('export.asTable') : 'Export board'
   })
 
   if (!path) {
@@ -5021,6 +5367,7 @@ function EditableText({ value, onDone, multiline = true, className }) {
 }
 
 function NoteView({ item, editing, run, k, far }) {
+  const t = usePluginI18n('whiteboard')
   const tone = TONES[item.tone] || TONES.butter
   const working = run?.state === 'running' || run?.state === 'queued'
   const meta = !editing && (item.owner || item.due || item.action || item.kanban || item.asked || item.progress)
@@ -5057,8 +5404,8 @@ function NoteView({ item, editing, run, k, far }) {
             className: 'wb-work',
             children: [
               jsx('div', { className: 'wb-work-dot', style: { background: `hsl(${run.hue ?? HERMES_HUE} 80% 50%)` } }),
-              jsx('span', { children: run.state === 'queued' ? 'Waiting for a free agent' : run.activity || 'Working' }),
-              jsx('button', { 'data-nodrag': true, onClick: () => stopRun(item.id), onPointerDown: event => event.stopPropagation(), type: 'button', children: 'Stop' })
+              jsx('span', { children: run.state === 'queued' ? t('note.waitingAgent') : run.activity || 'Working' }),
+              jsx('button', { 'data-nodrag': true, onClick: () => stopRun(item.id), onPointerDown: event => event.stopPropagation(), type: 'button', children: t('note.stop') })
             ]
           })
         : !editing
@@ -5067,9 +5414,9 @@ function NoteView({ item, editing, run, k, far }) {
               'data-nodrag': true,
               onClick: () => requestHand([item.id]),
               onPointerDown: event => event.stopPropagation(),
-              title: run?.state === 'failed' ? run.error : 'A Hermes agent does this and delivers the result here',
+              title: run?.state === 'failed' ? run.error : t('note.agentTip'),
               type: 'button',
-              children: [jsx(Line, { name: 'hand' }), item.status === 'delivered' ? 'Again' : run?.state === 'failed' ? 'Retry' : 'Hand to Hermes']
+              children: [jsx(Line, { name: 'hand' }), item.status === 'delivered' ? t('note.again') : run?.state === 'failed' ? t('note.retry') : t('tool.hand')]
             })
           : null
     ]
@@ -5156,6 +5503,7 @@ function FreeView({ item, editing }) {
 }
 
 function ResultView({ item }) {
+  const t = usePluginI18n('whiteboard')
   const unpacking = useValue($unpacking).includes(item.id)
   const quiet = event => event.stopPropagation()
 
@@ -5170,7 +5518,7 @@ function ResultView({ item }) {
           jsx('span', { className: 'wb-postmark', children: item.stamp || 'Delivered' })
         ]
       }),
-      item.question ? jsx('div', { className: 'wb-asked', children: `You asked: ${item.question}` }) : null,
+      item.question ? jsx('div', { className: 'wb-asked', children: t('result.youAsked', item.question) }) : null,
       jsx('div', {
         className: 'wb-result-body',
         'data-nodrag': true,
@@ -5178,8 +5526,8 @@ function ResultView({ item }) {
         onWheel: quiet,
         children: jsx(Streamdown, { controls: false, children: item.text || '' })
       }),
-      item.flags?.length ? jsx('div', { className: 'wb-flag', children: `Used ${item.flags.join(', ')}` }) : null,
-      item.model ? jsx('div', { className: 'wb-model', title: 'The model picked in Settings did this', children: `Done by ${clean(item.model, 60)}` }) : null,
+      item.flags?.length ? jsx('div', { className: 'wb-flag', children: t('result.used', item.flags.join(', ')) }) : null,
+      item.model ? jsx('div', { className: 'wb-model', title: t('result.modelTip'), children: t('result.doneBy', clean(item.model, 60)) }) : null,
       jsxs('div', {
         className: 'wb-sources',
         children: [
@@ -5194,9 +5542,9 @@ function ResultView({ item }) {
               disabled: unpacking,
               onClick: () => void unpackResult(item.id),
               onPointerDown: quiet,
-              title: 'Hermes turns this into notes and next steps for you to accept',
+              title: t('result.unpackTip'),
               type: 'button',
-              children: unpacking ? 'Unpacking' : 'Unpack into notes'
+              children: unpacking ? t('result.unpacking') : t('result.unpack')
             },
             'unpack'
           )
@@ -5668,6 +6016,7 @@ function useOutside(open, close) {
  *  even when Hermes no longer offers it, marked as such, so nothing changes
  *  behind the person's back. */
 function ModelPicker({ hint, label, role }) {
+  const t = usePluginI18n('whiteboard')
   const choice = useValue($models)[role]
   const options = useValue($modelOptions)
   const key = entry => JSON.stringify([entry.provider || '', entry.model])
@@ -5694,8 +6043,8 @@ function ModelPicker({ hint, label, role }) {
         },
         value: choice ? key(choice) : '',
         children: [
-          jsx('option', { value: '', children: 'Hermes default' }, 'default'),
-          choice && !known ? jsx('option', { value: key(choice), children: `${choice.model}${options.loading || options.providers.length === 0 ? '' : ' (not listed by Hermes now)'}` }, 'saved') : null,
+          jsx('option', { value: '', children: t('model.hermesDefault') }, 'default'),
+          choice && !known ? jsx('option', { value: key(choice), children: `${choice.model}${options.loading || options.providers.length === 0 ? '' : t('model.notListed')}` }, 'saved') : null,
           ...options.providers.map(provider =>
             jsx('optgroup', { label: provider.name, children: provider.models.map(model => jsx('option', { value: key({ model, provider: provider.slug }), children: model }, model)) }, provider.slug)
           )
@@ -5798,7 +6147,7 @@ function TopBar({ board }) {
           }),
       board.chat?.id
         ? jsx(Tip, {
-            label: chatWorking ? 'The linked chat is working now' : unheard > 0 ? `This board is linked to a chat. ${unheard} change${unheard === 1 ? '' : 's'} here it has not heard yet` : 'This board is linked to a chat',
+            label: chatWorking ? t('top.linkedWorking') : unheard > 0 ? t('top.linkedUnheard', unheard) : t('top.linkedBoard'),
             children: jsxs('button', {
               className: `wb-btn wb-linked${chatWorking ? ' wb-working' : ''}`,
               'data-menu-trigger': true,
@@ -5814,16 +6163,16 @@ function TopBar({ board }) {
         : null,
       drift > 0
         ? jsx(Tip, {
-            label: `${drift} card${drift === 1 ? ' has' : 's have'} moved or been added on the Kanban board ${clean(board.fromKanban.name, 40)}`,
+            label: t('top.kanbanDrift', drift, clean(board.fromKanban.name, 40)),
             children: jsxs('button', {
               className: 'wb-btn wb-linked wb-drift',
               onClick: () => void run('refresh from Kanban', async () => {
                 const out = await refreshFromKanban()
 
-                return `${out.added} added and ${out.moved} moved. One undo puts it back.`
+                return t('top.pulledBack', out.added, out.moved)
               }),
               type: 'button',
-              children: [jsx(Line, { name: 'kanban' }), jsx('span', { children: 'Kanban changed · Refresh' })]
+              children: [jsx(Line, { name: 'kanban' }), jsx('span', { children: t('top.kanbanChanged') })]
             })
           })
         : null,
@@ -5832,14 +6181,14 @@ function TopBar({ board }) {
             className: 'wb-menu wb-kanban-menu',
             style: { left: 10, top: 42 },
             children: [
-              jsx('small', { children: `This board belongs to the work in "${clean(board.chat?.title, 60) || 'a chat'}". Hand to Hermes and Run ask before they start anything separate.` }),
+              jsx('small', { children: t('top.belongs', clean(board.chat?.title, 60) || t('top.aChat')) }),
               turnLine(turn) ? jsx('small', { children: turnLine(turn) }) : null,
               jsxs('button', { onClick: () => void run('open that chat', () => openLinkedChat(board.chat.id)), type: 'button', children: [jsx(Line, { name: 'chat' }), 'Open the chat'] }),
               unheard > 0
                 ? jsx('small', {
                     children: sharing
-                      ? `${unheard} change${unheard === 1 ? '' : 's'} you made here ${unheard === 1 ? 'goes' : 'go'} to the chat with your next message there.`
-                      : `${unheard} change${unheard === 1 ? '' : 's'} you made here ${unheard === 1 ? 'has' : 'have'} not reached the chat. With "Chats can read my boards" on, they go along with your next message there.`
+                      ? t('top.shareOn', unheard)
+                      : t('top.shareOff', unheard)
                   })
                 : null,
               unheard > 0 ? jsxs('button', { onClick: () => void run('tell the chat', tellChat), type: 'button', children: [jsx(Line, { name: 'chat' }), 'Tell the chat now'] }) : null,
@@ -5860,7 +6209,7 @@ function TopBar({ board }) {
             close,
             onPick: chat => {
               linkChat(chat)
-              $toast.set({ kind: 'success', text: `Linked to "${clean(chat.title, 40)}".` })
+              $toast.set({ kind: 'success', text: t('chat.linkedTo', clean(chat.title, 40)) })
             },
             style: { left: 10, top: 42 }
           })
@@ -5868,8 +6217,8 @@ function TopBar({ board }) {
       menu === 'kanban'
         ? jsx(KanbanBoards, {
             close,
-            hint: 'Lay a Kanban board out as a new whiteboard:',
-            onPick: slug => void run('lay out that Kanban board', async () => `${await boardFromKanban(slug)} cards laid out. It is a copy: changes here do not go back to Kanban.`),
+            hint: t('top.kanbanIntro'),
+            onPick: slug => void run('lay out that Kanban board', async () => t('top.kanbanLaidOut', await boardFromKanban(slug))),
             style: { left: 10, top: 42 }
           })
         : null,
@@ -5923,7 +6272,7 @@ function TopBar({ board }) {
                 onClick: () => {
                   setMenu(null)
 
-                  if (window.confirm(`Delete "${board.name}"? This can't be undone.`)) {
+                  if (window.confirm(t('top.deleteConfirm', board.name))) {
                     removeBoard(board.id)
                   }
                 },
@@ -5941,18 +6290,18 @@ function TopBar({ board }) {
             className: 'wb-run',
             children: [
               jsx('div', { className: 'wb-work-dot', style: { background: GOLD } }),
-              jsx('span', { children: plan.wrapping ? 'Hermes is writing the brief' : `Stop ${plan.index + 1} of ${plan.total} · ${clean(plan.label, 28)}${plan.working > 0 ? ` · ${plan.working} agent${plan.working === 1 ? '' : 's'}` : ''}` }),
+              jsx('span', { children: plan.wrapping ? t('plan.writingBrief') : t('plan.stopLine', plan.index + 1, plan.total, clean(plan.label, 28), plan.working > 0 ? t('plan.agents', plan.working) : '') }),
               jsx('button', { className: 'wb-btn', onClick: stopPlan, type: 'button', children: 'Stop' })
             ]
           })
         : open > 0
           ? jsx(Tip, {
-              label: `Hermes travels the board stop by stop and its agents do the ${open} open action item${open === 1 ? '' : 's'}, each building on the last`,
+              label: t('plan.intro', open),
               children: jsxs('button', { className: 'wb-btn wb-go', onClick: () => requestRun(), type: 'button', children: [jsx(Line, { name: 'play' }), routed ? 'Run the route' : 'Run the plan', jsx('span', { className: 'wb-badge', children: String(open) })] })
             })
           : null,
       jsx(Tip, {
-        label: notes < 2 ? 'Add a few notes first' : 'Hermes suggests groups, owners and action items. You accept or skip each one.',
+        label: notes < 2 ? t('top.needNotes') : t('top.tidyTip'),
         children: jsxs('button', {
           className: 'wb-btn wb-gold',
           disabled: tidy.busy || notes < 2,
@@ -5968,11 +6317,11 @@ function TopBar({ board }) {
         children: [t('panel.suggestions'), pending > 0 ? jsx('span', { className: 'wb-badge', children: String(pending) }) : null]
       }),
       jsx(Tip, {
-        label: 'Export',
+        label: t('top.export'),
         children: jsx('button', { className: 'wb-btn wb-icon', 'data-menu-trigger': true, onClick: () => setMenu(menu === 'export' ? null : 'export'), type: 'button', children: jsx(icons.Download, { size: 15 }) })
       }),
       jsx(Tip, {
-        label: 'Settings',
+        label: t('top.settings'),
         children: jsx('button', {
           className: 'wb-btn wb-icon',
           'data-menu-trigger': true,
@@ -6023,8 +6372,8 @@ function TopBar({ board }) {
                 ]
               }),
               jsx('div', { className: 'wb-sep' }),
-              jsx(ModelPicker, { hint: 'Lays out boards, groups notes, unpacks results and writes the brief.', label: 'Planning model', role: 'planning' }),
-              jsx(ModelPicker, { hint: 'Does the work: Hand to Hermes, Run the route and Ask.', label: 'Agent model', role: 'agent' }),
+              jsx(ModelPicker, { hint: t('top.planningHint'), label: t('top.planningModel'), role: 'planning' }),
+              jsx(ModelPicker, { hint: t('top.agentHint'), label: t('top.agentModel'), role: 'agent' }),
               jsx('small', {
                 className: 'wb-model-note',
                 children: modelOptions.loading
@@ -6040,29 +6389,32 @@ function TopBar({ board }) {
 
 /** Where a note's Kanban card is now. */
 function KanbanChip({ mark }) {
+  const t = usePluginI18n('whiteboard')
   const status = useValue($kanbanLive)[mark.id]
   const tone = status === 'done' ? ' wb-kanban-done' : status === 'running' || status === 'review' ? ' wb-kanban-running' : status === 'archived' ? ' wb-kanban-gone' : ''
 
   return jsx('span', {
     className: `wb-chip wb-kanban${tone}`,
-    title: status === 'archived' ? `Card ${mark.id} is no longer on the Kanban board ${mark.board}. It was archived there.` : `Card ${mark.id} on the Kanban board ${mark.board}${status ? `, checked while this page is open` : ''}`,
-    children: status ? `Kanban · ${status === 'archived' ? 'archived' : kanbanTitle(status)}` : 'On Kanban'
+    title: status === 'archived' ? t('chip.cardArchived', mark.id, mark.board) : t('chip.cardTitle', mark.id, mark.board, status ? t('chip.checkedNow') : ''),
+    children: status ? t('chip.kanbanStatus', status === 'archived' ? t('chip.archived') : kanbanTitle(status)) : t('chip.onKanban')
   })
 }
 
 /** A note that was put to the linked chat, and whether the chat is on it now. */
 function AskedChip({ id }) {
+  const t = usePluginI18n('whiteboard')
   const working = useValue($asks).some(ask => ask.state === 'working' && ask.noteIds.includes(id))
 
   return jsx('span', {
     className: `wb-chip wb-asked${working ? ' wb-working' : ''}`,
-    title: working ? 'The linked chat is working on this now. Its answer will wait under Suggestions.' : 'This was put to the linked chat. Its answer comes back as a suggestion.',
-    children: working ? 'Chat is working' : 'Asked in chat'
+    title: working ? t('chip.askedWorkingTip') : t('chip.askedTip'),
+    children: working ? t('chip.chatWorking') : 'Asked in chat'
   })
 }
 
 /** Where the linked chat says it is with a note. It came without review, so one click clears it. */
 function ProgressChip({ item }) {
+  const t = usePluginI18n('whiteboard')
   const { detail, state } = item.progress
 
   return jsx('button', {
@@ -6072,7 +6424,7 @@ function ProgressChip({ item }) {
       clearProgress(item.id)
     },
     onPointerDown: event => event.stopPropagation(),
-    title: `The linked chat reported this${detail ? `: ${detail}` : ''}. Click to clear it.`,
+    title: t('chip.reported', detail ? t('chip.reportedDetail', detail) : ''),
     type: 'button',
     children: PROGRESS[state]
   })
@@ -6080,6 +6432,7 @@ function ProgressChip({ item }) {
 
 /** The person's recent chats, to link the board to one. */
 function ChatPicker({ close, onPick, style }) {
+  const t = usePluginI18n('whiteboard')
   const [state, setState] = useState({ chats: [], error: '', loading: true })
 
   useEffect(() => {
@@ -6098,10 +6451,10 @@ function ChatPicker({ close, onPick, style }) {
     className: 'wb-menu wb-kanban-menu wb-chat-menu',
     style,
     children: [
-      jsx('small', { children: 'Link this board to the chat its work is happening in:' }),
-      state.loading ? jsx('small', { children: 'Asking Hermes for your chats...' }) : null,
+      jsx('small', { children: t('picker.intro') }),
+      state.loading ? jsx('small', { children: t('picker.loading') }) : null,
       state.error ? jsx('small', { className: 'wb-kanban-error', children: state.error }) : null,
-      !state.loading && !state.error && state.chats.length === 0 ? jsx('small', { children: 'No chats in this Hermes profile yet.' }) : null,
+      !state.loading && !state.error && state.chats.length === 0 ? jsx('small', { children: t('picker.empty') }) : null,
       ...state.chats.map(chat =>
         jsxs(
           'button',
@@ -6123,6 +6476,7 @@ function ChatPicker({ close, onPick, style }) {
 /** On a linked board, where the work goes: to the chat that owns it, or started
  *  separately from the board. Nothing starts until one is picked. */
 function Handoff() {
+  const t = usePluginI18n('whiteboard')
   const pending = useValue($handoff)
   const board = useValue($board)
 
@@ -6132,7 +6486,7 @@ function Handoff() {
 
   const count = pending.noteIds.length
   const chat = clean(board.chat?.title, 50) || 'the linked chat'
-  const what = pending.plan ? `the ${count} open item${count === 1 ? '' : 's'} of this plan` : count === 1 ? 'this note' : `these ${count} notes`
+  const what = pending.plan ? t('handoff.planItems', count) : count === 1 ? t('handoff.thisNote') : t('handoff.theseNotes', count)
   const done = () => $handoff.set(null)
 
   return jsx('div', {
@@ -6142,22 +6496,22 @@ function Handoff() {
       className: 'wb-handoff-card',
       role: 'dialog',
       children: [
-        jsx('b', { children: 'This board is linked to a chat' }),
-        jsx('p', { children: `"${chat}" already owns this work. Where should ${what} go?` }),
+        jsx('b', { children: t('top.linkedBoard') }),
+        jsx('p', { children: t('handoff.question', chat, what) }),
         jsxs('button', {
           className: 'wb-btn wb-solid',
           disabled: count === 0 || !board.chat?.id,
           onClick: () => {
             done()
             askLinkedChat(pending.noteIds).then(
-              how => host.notify?.({ kind: 'success', message: how === 'seated' ? 'The request is in the message box. Press Enter to send it.' : 'The request is copied. Paste it into the chat.', title: 'Whiteboard' }),
+              how => host.notify?.({ kind: 'success', message: how === 'seated' ? t('handoff.seated') : t('handoff.copied'), title: 'Whiteboard' }),
               error => $toast.set({ kind: 'error', text: errorText(error) })
             )
           },
           type: 'button',
-          children: [jsx(Line, { name: 'chat' }), 'Ask in the linked chat']
+          children: [jsx(Line, { name: 'chat' }), t('handoff.ask')]
         }),
-        jsx('small', { children: 'Opens the chat with the request written out. You send it, and the chat keeps its own approvals.' }),
+        jsx('small', { children: t('handoff.askNote') }),
         jsxs('button', {
           className: 'wb-btn',
           onClick: () => {
@@ -6170,9 +6524,9 @@ function Handoff() {
             }
           },
           type: 'button',
-          children: [jsx(Line, { name: 'hand' }), 'Start separate work here']
+          children: [jsx(Line, { name: 'hand' }), t('handoff.separate')]
         }),
-        jsx('small', { children: 'New Hermes agents do it from the board. The chat is not told.' }),
+        jsx('small', { children: t('handoff.separateNote') }),
         jsx('button', { className: 'wb-btn wb-handoff-cancel', onClick: done, type: 'button', children: 'Cancel' })
       ]
     })
@@ -6181,6 +6535,7 @@ function Handoff() {
 
 /** The Kanban boards to pick from. They are asked for when the menu opens. */
 function KanbanBoards({ close, hint, onPick, style, withStart }) {
+  const t = usePluginI18n('whiteboard')
   const [state, setState] = useState({ boards: [], current: '', error: '', loading: true })
   const [start, setStart] = useState(false)
 
@@ -6201,7 +6556,7 @@ function KanbanBoards({ close, hint, onPick, style, withStart }) {
     style,
     children: [
       jsx('small', { children: hint }),
-      state.loading ? jsx('small', { children: 'Asking Kanban for its boards...' }) : null,
+      state.loading ? jsx('small', { children: t('kanbanBoards.loading') }) : null,
       state.error ? jsx('small', { className: 'wb-kanban-error', children: state.error }) : null,
       ...state.boards.map(entry =>
         jsxs(
@@ -6222,7 +6577,7 @@ function KanbanBoards({ close, hint, onPick, style, withStart }) {
             className: 'wb-kanban-start',
             children: [
               jsx('input', { checked: start, onChange: event => setStart(event.target.checked), type: 'checkbox' }),
-              jsxs('span', { children: ['Let Hermes start on them', jsx('small', { children: start ? 'They go to Triage. Hermes splits each into tasks and its agents begin, on your model.' : 'Off: they are parked in Blocked and nothing runs until you unblock them.' })] })
+              jsxs('span', { children: ['Let Hermes start on them', jsx('small', { children: start ? t('kanbanBoards.startOnNote') : t('kanbanBoards.startOffNote') })] })
             ]
           })
         : null
@@ -6250,9 +6605,9 @@ function Toolbar() {
   const toKanban = async (slug, name, start) => {
     try {
       const count = await sendToKanban(notes.map(note => note.id), slug, start)
-      const cards = `${count} ${count === 1 ? 'card' : 'cards'}`
+      const cards = t('toolbar.cardCount', count)
 
-      $toast.set({ kind: 'success', text: start ? `${cards} in Triage on ${clean(name, 40)}. Hermes will split them into tasks and start working.` : `${cards} parked in Blocked on ${clean(name, 40)}. Nothing runs until you unblock them there.` })
+      $toast.set({ kind: 'success', text: start ? t('toolbar.sentOn', cards, clean(name, 40)) : t('toolbar.sentOff', cards, clean(name, 40)) })
     } catch (error) {
       $toast.set({ kind: 'error', text: errorText(error) })
     }
@@ -6364,7 +6719,7 @@ function Toolbar() {
               style: { position: 'relative' },
               children: [
                 jsx('span', { 'data-menu-trigger': true, children: tool('Send to Kanban', jsx(Line, { name: 'kanban' }), () => setKanban(!kanban), kanban) }, 't'),
-                kanban ? jsx(KanbanBoards, { close: () => setKanban(false), hint: `Make ${notes.length === 1 ? 'a card' : `${notes.length} cards`} on:`, onPick: toKanban, withStart: true, style: { bottom: 0, left: 46 } }, 'm') : null
+                kanban ? jsx(KanbanBoards, { close: () => setKanban(false), hint: t('toolbar.makeCards', notes.length), onPick: toKanban, withStart: true, style: { bottom: 0, left: 46 } }, 'm') : null
               ]
             },
             'kanban'
@@ -6439,7 +6794,7 @@ function Compose() {
               jsx(Sticker, { name: 'sandal', size: 26 }),
               jsx('span', {
                 className: 'wb-shimmer',
-                children: `Hermes is ${compose.asking ? 'answering' : 'laying out'} "${clean(compose.request, 60)}"${compose.activity && compose.activity !== 'Thinking it through' ? ` · ${compose.activity}` : ''}`
+                children: t('compose.working', compose.asking ? t('compose.answering') : t('compose.layingOut'), clean(compose.request, 60), compose.activity && compose.activity !== 'Thinking it through' ? t('compose.activity', compose.activity) : '')
               }),
               jsx('button', { className: 'wb-btn', onClick: stopCompose, type: 'button', children: 'Stop' })
             ]
@@ -6561,7 +6916,7 @@ function Panel({ board }) {
       jsxs('div', {
         className: 'wb-panel-head',
         children: [
-          jsx('b', { children: 'Hermes suggests' }),
+          jsx('b', { children: t('panel.hermesSuggests') }),
           proposals.length > 0 && !pending ? jsx('button', { className: 'wb-btn', onClick: clearDecided, type: 'button', children: 'Clear' }) : null,
           jsx('button', { 'aria-label': 'Close', className: 'wb-btn wb-icon', onClick: () => $panel.set(false), type: 'button', children: jsx(icons.X, { size: 15 }) })
         ]
@@ -6587,7 +6942,7 @@ function Panel({ board }) {
                         className: 'wb-proposal-sum',
                         style: { alignItems: 'center', display: 'flex', gap: 8 },
                         children: [
-                          jsx('span', { style: { flex: 1 }, children: `${proposal.from === 'chat' ? 'From a chat · ' : ''}${proposal.summary}` }),
+                          jsx('span', { style: { flex: 1 }, children: `${proposal.from === 'chat' ? t('panel.fromChatPrefix') : ''}${proposal.summary}` }),
                           proposal.items.filter(item => item.state === 'pending').length > 1
                             ? jsx('button', { className: 'wb-btn wb-gold', onClick: () => void acceptAll(proposal), type: 'button', children: 'Accept all' })
                             : null
@@ -6635,6 +6990,7 @@ function Empty() {
 }
 
 function Toast() {
+  const t = usePluginI18n('whiteboard')
   const toast = useValue($toast)
 
   useEffect(() => {
@@ -6650,7 +7006,7 @@ function Toast() {
   return toast
     ? jsxs('div', {
         className: 'wb-toast',
-        children: [jsx('span', { children: toast.text }), jsx('button', { onClick: () => $toast.set(null), type: 'button', children: 'Dismiss' })]
+        children: [jsx('span', { children: toast.text }), jsx('button', { onClick: () => $toast.set(null), type: 'button', children: t('toast.dismiss') })]
       })
     : null
 }
@@ -6715,6 +7071,7 @@ function useShortcuts() {
 }
 
 function WhiteboardPage() {
+  const t = usePluginI18n('whiteboard')
   const board = useValue($board)
   const panel = useValue($panel)
   const compose = useValue($compose)
