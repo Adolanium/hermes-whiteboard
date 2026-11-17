@@ -121,14 +121,10 @@ const MESSAGES = {
     'tone.lilac': 'Lilac',
     'tone.paper': 'Paper',
     'group.newTitle': 'New group',
-    'activity.browsing': 'Browsing',
     'activity.starting': 'Starting',
     'ago.justNow': 'just now',
     'bullets.empty': 'There was nothing in that result to unpack.',
     'bullets.point': 'A point of the result',
-    'changes.actionItem': ' (action item)',
-    'changes.added': 'Added',
-    'changes.changedTo': 'Changed to',
     'changes.inBox': 'The changes are in the message box. Press Enter to send them.',
     'chat.answerTip': 'The answer from the linked chat.',
     'chat.answered': 'The linked chat answered',
@@ -140,6 +136,7 @@ const MESSAGES = {
     'chip.chatOnIt': 'Chat is on it',
     'chip.chatWorking': 'Chat is working',
     'chip.onKanban': 'On Kanban',
+    'chip.kanbanStatus': (s) => `Kanban · ${s}`,
     'chip.open': 'Open',
     'compose.layingOut': 'laying out',
     'error.closed': 'Hermes closed before this finished.',
@@ -173,8 +170,6 @@ const MESSAGES = {
     'plan.looseEnds': 'Loose ends',
     'plan.writingBrief': 'Writing the brief',
     'proposal.fromChat': 'From chat',
-    'result.data': 'Data',
-    'result.sheets': 'Sheets',
     'result.unpack': 'Unpack into notes',
     'result.unpackTip': 'Hermes turns this into notes and next steps for you to accept',
     'result.unpacking': 'Unpacking',
@@ -350,14 +345,10 @@ const MESSAGES = {
     'tone.lilac': '丁香紫',
     'tone.paper': '纸白',
     'group.newTitle': '未命名分组',
-    'activity.browsing': '浏览中',
     'activity.starting': '启动中',
     'ago.justNow': '刚刚',
     'bullets.empty': '这份结果里没有可拆的内容。',
     'bullets.point': '结果里的一个要点',
-    'changes.actionItem': '（行动项）',
-    'changes.added': '新增',
-    'changes.changedTo': '改为',
     'changes.inBox': '改动已写进输入框，按回车发送。',
     'chat.answerTip': '关联会话的回答。',
     'chat.answered': '关联会话已回答',
@@ -369,8 +360,9 @@ const MESSAGES = {
     'chip.chatOnIt': '会话在做',
     'chip.chatWorking': '会话处理中',
     'chip.onKanban': '已在看板',
+    'chip.kanbanStatus': (s) => `看板 · ${s}`,
     'chip.open': '打开',
-    'compose.layingOut': '正在排版',
+    'compose.layingOut': '排版',
     'error.closed': 'Hermes 在这件事完成前就关闭了。',
     'error.noSession': 'Hermes 没有返回会话。',
     'error.stopped': '已停止',
@@ -402,8 +394,6 @@ const MESSAGES = {
     'plan.looseEnds': '收尾',
     'plan.writingBrief': '正在写提纲',
     'proposal.fromChat': '来自会话',
-    'result.data': '数据',
-    'result.sheets': '表格',
     'result.unpack': '拆成便签',
     'result.unpackTip': 'Hermes 会把它拆成便签和下一步，等你确认',
     'result.unpacking': '正在拆解',
@@ -715,7 +705,7 @@ function lastJsonObject(text, accept = () => true) {
 const STICKERS = {
   rocket: {
     hue: 8,
-    label: tr('sticker.rocket'),
+    label: 'sticker.rocket',
     fill: ['M32 12c8 6 11 15 9 26H23c-2-11 1-20 9-26Z'],
     ink: [
       'M32 12c8 6 11 15 9 26H23c-2-11 1-20 9-26Z',
@@ -726,13 +716,13 @@ const STICKERS = {
   },
   flag: {
     hue: 152,
-    label: tr('sticker.flag'),
+    label: 'sticker.flag',
     fill: ['M22 15c8-4 14 4 22 0v18c-8 4-14-4-22 0Z'],
     ink: ['M22 52V13', 'M22 15c8-4 14 4 22 0v18c-8 4-14-4-22 0']
   },
   calendar: {
     hue: 205,
-    label: tr('sticker.calendar'),
+    label: 'sticker.calendar',
     fill: ['M15 22h34v26a4 4 0 0 1-4 4H19a4 4 0 0 1-4-4Z'],
     ink: [
       'M19 17h26a4 4 0 0 1 4 4v27a4 4 0 0 1-4 4H19a4 4 0 0 1-4-4V21a4 4 0 0 1 4-4Z',
@@ -743,7 +733,7 @@ const STICKERS = {
   },
   bulb: {
     hue: 46,
-    label: tr('sticker.idea'),
+    label: 'sticker.idea',
     fill: ['M32 12a13 13 0 0 1 8 23c-2 2-3 4-3 7H27c0-3-1-5-3-7a13 13 0 0 1 8-23Z'],
     ink: [
       'M32 12a13 13 0 0 1 8 23c-2 2-3 4-3 7H27c0-3-1-5-3-7a13 13 0 0 1 8-23Z',
@@ -753,13 +743,13 @@ const STICKERS = {
   },
   target: {
     hue: 350,
-    label: tr('sticker.target'),
+    label: 'sticker.target',
     fill: ['M32 14a18 18 0 1 0 0.1 0Z'],
     ink: ['M32 14a18 18 0 1 0 0.1 0', 'M32 22a10 10 0 1 0 0.1 0', 'M32 29a3 3 0 1 0 0.1 0', 'M32 32L50 14M44 14h6v6']
   },
   coins: {
     hue: 42,
-    label: tr('sticker.money'),
+    label: 'sticker.money',
     fill: ['M20 26c0-3 5-5 12-5s12 2 12 5v16c0 3-5 5-12 5s-12-2-12-5Z'],
     ink: [
       'M20 26c0 3 5 5 12 5s12-2 12-5-5-5-12-5-12 2-12 5Z',
@@ -769,55 +759,55 @@ const STICKERS = {
   },
   truck: {
     hue: 205,
-    label: tr('sticker.delivery'),
+    label: 'sticker.delivery',
     fill: ['M12 22h24v18H12Z', 'M36 28h9l6 6v6H36Z'],
     ink: ['M12 22h24v18H12Z', 'M36 28h9l6 6v6H36', 'M22 44a4 4 0 1 0 0.1 0M44 44a4 4 0 1 0 0.1 0', 'M39 31h5l3 3h-8Z']
   },
   mail: {
     hue: 14,
-    label: tr('sticker.mail'),
+    label: 'sticker.mail',
     fill: ['M14 20h36v26H14Z'],
     ink: ['M17 20h30a3 3 0 0 1 3 3v20a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3V23a3 3 0 0 1 3-3Z', 'M15 22l17 13 17-13']
   },
   search: {
     hue: 172,
-    label: tr('sticker.research'),
+    label: 'sticker.research',
     fill: ['M28 14a13 13 0 1 0 0.1 0Z'],
     ink: ['M28 14a13 13 0 1 0 0.1 0', 'M37 37l12 12', 'M22 25c1-3 3-5 6-5']
   },
   warning: {
     hue: 30,
-    label: tr('sticker.risk'),
+    label: 'sticker.risk',
     fill: ['M32 13l20 35H12Z'],
     ink: ['M30 14.5a2.3 2.3 0 0 1 4 0l18 31a2.3 2.3 0 0 1-2 3.5H14a2.3 2.3 0 0 1-2-3.5Z', 'M32 26v11', 'M32 43v1']
   },
   heart: {
     hue: 350,
-    label: tr('sticker.love'),
+    label: 'sticker.love',
     fill: ['M32 49C16 39 13 30 15 24c3-8 13-9 17-2 4-7 14-6 17 2 2 6-1 15-17 25Z'],
     ink: ['M32 49C16 39 13 30 15 24c3-8 13-9 17-2 4-7 14-6 17 2 2 6-1 15-17 25Z', 'M21 26c1-3 3-4 5-4']
   },
   star: {
     hue: 46,
-    label: tr('sticker.star'),
+    label: 'sticker.star',
     fill: ['M32 12l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2Z'],
     ink: ['M32 12l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2Z']
   },
   check: {
     hue: 145,
-    label: tr('sticker.done'),
+    label: 'sticker.done',
     fill: ['M32 13a19 19 0 1 0 0.1 0Z'],
     ink: ['M32 13a19 19 0 1 0 0.1 0', 'M23 33l7 7 12-15']
   },
   clock: {
     hue: 220,
-    label: tr('sticker.time'),
+    label: 'sticker.time',
     fill: ['M32 13a19 19 0 1 0 0.1 0Z'],
     ink: ['M32 13a19 19 0 1 0 0.1 0', 'M32 21v12l8 5', 'M32 15v3M50 32h-3M32 50v-3M14 32h3']
   },
   people: {
     hue: 266,
-    label: tr('sticker.people'),
+    label: 'sticker.people',
     fill: ['M14 48c0-8 6-13 12-13s12 5 12 13Z', 'M30 46c1-7 6-11 11-11s11 4 11 11Z'],
     ink: [
       'M26 22a6 6 0 1 0 0.1 0',
@@ -828,13 +818,13 @@ const STICKERS = {
   },
   chart: {
     hue: 152,
-    label: tr('sticker.growth'),
+    label: 'sticker.growth',
     fill: ['M16 38h7v12h-7Z', 'M28 30h7v20h-7Z', 'M40 22h7v28h-7Z'],
     ink: ['M16 38h7v12h-7ZM28 30h7v20h-7ZM40 22h7v28h-7Z', 'M14 27l12-9 8 5 14-11', 'M42 12h6v6']
   },
   gear: {
     hue: 220,
-    label: tr('sticker.build'),
+    label: 'sticker.build',
     fill: ['M32 16l4 1 2-3 5 3-1 4 3 3 4-1 3 5-3 2 1 4-1 4 3 2-3 5-4-1-3 3 1 4-5 3-2-3-4 1-4-1-2 3-5-3 1-4-3-3-4 1-3-5 3-2-1-4 1-4-3-2 3-5 4 1 3-3-1-4 5-3 2 3Z'],
     ink: [
       'M32 16l4 1 2-3 5 3-1 4 3 3 4-1 3 5-3 2 1 4-1 4 3 2-3 5-4-1-3 3 1 4-5 3-2-3-4 1-4-1-2 3-5-3 1-4-3-3-4 1-3-5 3-2-1-4 1-4-3-2 3-5 4 1 3-3-1-4 5-3 2 3Z',
@@ -843,7 +833,7 @@ const STICKERS = {
   },
   trophy: {
     hue: 42,
-    label: tr('sticker.win'),
+    label: 'sticker.win',
     fill: ['M22 14h20v10a10 10 0 0 1-20 0Z'],
     ink: [
       'M22 14h20v10a10 10 0 0 1-20 0Z',
@@ -853,13 +843,13 @@ const STICKERS = {
   },
   pin: {
     hue: 8,
-    label: tr('sticker.place'),
+    label: 'sticker.place',
     fill: ['M32 51C22 39 18 32 18 26a14 14 0 0 1 28 0c0 6-4 13-14 25Z'],
     ink: ['M32 51C22 39 18 32 18 26a14 14 0 0 1 28 0c0 6-4 13-14 25Z', 'M32 21a5 5 0 1 0 0.1 0']
   },
   coffee: {
     hue: 24,
-    label: tr('sticker.break'),
+    label: 'sticker.break',
     fill: ['M16 26h28v12a12 12 0 0 1-12 12h-4a12 12 0 0 1-12-12Z'],
     ink: [
       'M16 26h28v12a12 12 0 0 1-12 12h-4a12 12 0 0 1-12-12Z',
@@ -869,7 +859,7 @@ const STICKERS = {
   },
   bug: {
     hue: 145,
-    label: tr('sticker.bug'),
+    label: 'sticker.bug',
     fill: ['M32 22c7 0 11 6 11 14s-4 14-11 14-11-6-11-14 4-14 11-14Z'],
     ink: [
       'M32 22c7 0 11 6 11 14s-4 14-11 14-11-6-11-14 4-14 11-14Z',
@@ -880,19 +870,19 @@ const STICKERS = {
   },
   gift: {
     hue: 330,
-    label: tr('sticker.gift'),
+    label: 'sticker.gift',
     fill: ['M15 27h34v8H15Z', 'M18 35h28v15H18Z'],
     ink: ['M15 27h34v8H15ZM18 35h28v15H18Z', 'M32 27v23', 'M32 27c-4-1-10-4-8-8s7 2 8 8c1-6 6-12 8-8s-4 7-8 8']
   },
   megaphone: {
     hue: 8,
-    label: tr('sticker.launch'),
+    label: 'sticker.launch',
     fill: ['M16 28l26-12v32L16 36Z'],
     ink: ['M16 28l26-12v32L16 36Z', 'M16 28h-3v8h3', 'M22 38l3 10h5l-2-9', 'M47 26c2 2 2 6 0 8M50 22c4 4 4 12 0 16']
   },
   sandal: {
     hue: 41,
-    label: tr('sticker.hermes'),
+    label: 'sticker.hermes',
     fill: ['M15 42c0-12 9-22 22-25 7-2 12 0 14 2-6 1-10 3-13 6 6-1 11 0 13 2-6 1-10 3-12 6 5 0 9 1 11 3-7 2-12 5-17 8-6 4-12 4-18-2Z'],
     ink: [
       'M15 42c0-12 9-22 22-25 7-2 12 0 14 2-6 1-10 3-13 6 6-1 11 0 13 2-6 1-10 3-12 6 5 0 9 1 11 3-7 2-12 5-17 8-6 4-12 4-18-2Z',
@@ -901,49 +891,49 @@ const STICKERS = {
   },
   chat: {
     hue: 205,
-    label: tr('sticker.talk'),
+    label: 'sticker.talk',
     fill: ['M14 18h36v22H30l-10 9v-9h-6Z'],
     ink: ['M17 18h30a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H30l-10 9v-9h-3a3 3 0 0 1-3-3V21a3 3 0 0 1 3-3Z', 'M22 26h20M22 32h12']
   },
   plane: {
     hue: 205,
-    label: tr('sticker.travel'),
+    label: 'sticker.travel',
     fill: ['M10 30l44-18-14 40-10-14Z'],
     ink: ['M10 30l44-18-14 40-10-14Z', 'M54 12L30 38M30 38v12l7-8']
   },
   camera: {
     hue: 266,
-    label: tr('sticker.media'),
+    label: 'sticker.media',
     fill: ['M12 22h40v26H12Z'],
     ink: ['M16 22h6l3-5h14l3 5h6a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4Z', 'M32 28a7 7 0 1 0 0.1 0']
   },
   book: {
     hue: 14,
-    label: tr('sticker.docs'),
+    label: 'sticker.docs',
     fill: ['M12 18c7-3 14-3 20 1v30c-6-4-13-4-20-1Z', 'M52 18c-7-3-14-3-20 1v30c6-4 13-4 20-1Z'],
     ink: ['M12 18c7-3 14-3 20 1v30c-6-4-13-4-20-1Z', 'M52 18c-7-3-14-3-20 1v30c6-4 13-4 20-1Z', 'M17 27c3-1 7-1 10 0M17 34c3-1 7-1 10 0M37 27c3-1 7-1 10 0']
   },
   cart: {
     hue: 152,
-    label: tr('sticker.sales'),
+    label: 'sticker.sales',
     fill: ['M18 22h32l-4 16H22Z'],
     ink: ['M10 16h5l7 22h24l4-16H18', 'M25 46a3 3 0 1 0 0.1 0M43 46a3 3 0 1 0 0.1 0']
   },
   shield: {
     hue: 220,
-    label: tr('sticker.safety'),
+    label: 'sticker.safety',
     fill: ['M32 12l18 6v12c0 11-7 18-18 22-11-4-18-11-18-22V18Z'],
     ink: ['M32 12l18 6v12c0 11-7 18-18 22-11-4-18-11-18-22V18Z', 'M24 31l6 6 10-12']
   },
   key: {
     hue: 42,
-    label: tr('sticker.access'),
+    label: 'sticker.access',
     fill: ['M22 24a9 9 0 1 0 0.1 0Z'],
     ink: ['M22 24a9 9 0 1 0 0.1 0', 'M31 33h21M45 33v7M51 33v5']
   },
   spark: {
     hue: 266,
-    label: tr('sticker.spark'),
+    label: 'sticker.spark',
     fill: ['M32 12c2 11 6 16 17 18-11 2-15 7-17 18-2-11-6-16-17-18 11-2 15-7 17-18Z'],
     ink: ['M32 12c2 11 6 16 17 18-11 2-15 7-17 18-2-11-6-16-17-18 11-2 15-7 17-18Z', 'M48 44c1 3 2 4 5 5-3 1-4 2-5 5-1-3-2-4-5-5 3-1 4-2 5-5Z']
   }
@@ -955,7 +945,7 @@ function Sticker({ name, size = 56, tilt = 0 }) {
   const fill = `hsl(${sticker.hue} 82% 66%)`
 
   return jsxs('svg', {
-    'aria-label': sticker.label,
+    'aria-label': tr(sticker.label),
     className: 'wb-sticker',
     role: 'img',
     style: { height: size, transform: tilt ? `rotate(${tilt}deg)` : undefined, width: size },
@@ -2235,7 +2225,7 @@ const VERBS = {
   execute_code: 'Running code',
   read_file: 'Reading',
   search_files: 'Searching files',
-  terminal: tr('status.running'),
+  terminal: 'Running',
   web_extract: 'Reading',
   web_search: 'Searching'
 }
@@ -2243,7 +2233,7 @@ const VERBS = {
 function activityOf(payload) {
   const name = String(payload?.name ?? payload?.tool_name ?? '').trim()
   const args = payload?.args && typeof payload.args === 'object' ? payload.args : {}
-  const verb = VERBS[name] || (name.startsWith('browser_') ? tr('activity.browsing') : name ? `Using ${name}` : 'Working')
+  const verb = VERBS[name] || (name.startsWith('browser_') ? 'Browsing' : name ? `Using ${name}` : 'Working')
   const urls = Array.isArray(args.urls) ? args.urls : args.url ? [args.url] : []
   const target = urls.length > 0 ? urls.map(hostOf).filter(Boolean).join(', ') : String(args.query ?? '').trim()
 
@@ -3988,7 +3978,7 @@ function watchLinkedChat() {
 // is how a board follows work that began in the chat, not on the board.
 const $chatActivity = atom({})
 const WORKING_TTL_MS = 30 * 60 * 1000
-const PROGRESS = { blocked: tr('status.blocked'), doing: tr('chip.chatOnIt'), done: tr('chip.chatDone') }
+const PROGRESS = { blocked: 'status.blocked', doing: 'chip.chatOnIt', done: 'chip.chatDone' }
 const TURN_STATES = new Set(['working', 'done', 'failed', 'stopped'])
 const heardTo = new Map()
 
@@ -4149,9 +4139,9 @@ function clearProgress(id) {
 /** What Tell the chat now writes: the changes the chat has not heard yet. */
 function changesRequest(board, changes) {
   const line = change => {
-    const extra = `${change.owner ? ` (owner: ${change.owner})` : ''}${change.due ? ` (due: ${change.due})` : ''}${change.action ? tr('changes.actionItem') : ''}`
+    const extra = `${change.owner ? ` (owner: ${change.owner})` : ''}${change.due ? ` (due: ${change.due})` : ''}${change.action ? ' (action item)' : ''}`
 
-    return change.kind === 'removed' ? `- Removed: ${change.text}` : `- ${change.kind === 'added' ? tr('changes.added') : tr('changes.changedTo')}: ${change.text}${extra}`
+    return change.kind === 'removed' ? `- Removed: ${change.text}` : `- ${change.kind === 'added' ? 'Added' : 'Changed to'}: ${change.text}${extra}`
   }
 
   return [chatMarker(board), 'I changed the board. Please take these into account and tell me if any of them changes the plan:', changes.map(line).join('\n')].join('\n\n')
@@ -4605,7 +4595,7 @@ function takeChatEntry(entry) {
 
 const SUITE_HELLO = 'hermes-suite:hello'
 const SUITE_NOTES = 'hermes-suite:notes'
-const SUITE_FROM = { data: tr('result.data'), sheets: tr('result.sheets') }
+const SUITE_FROM = { data: 'Data', sheets: 'Sheets' }
 const SUITE_MAX_NOTES = 24
 
 /** Notes another suite page sent, as one group on the open board. Returns the
@@ -6396,7 +6386,7 @@ function KanbanChip({ mark }) {
   return jsx('span', {
     className: `wb-chip wb-kanban${tone}`,
     title: status === 'archived' ? t('chip.cardArchived', mark.id, mark.board) : t('chip.cardTitle', mark.id, mark.board, status ? t('chip.checkedNow') : ''),
-    children: status ? t('chip.kanbanStatus', status === 'archived' ? t('chip.archived') : kanbanTitle(status)) : t('chip.onKanban')
+    children: status ? t('chip.kanbanStatus', status === 'archived' ? t('chip.archived') : KANBAN_COLUMNS[status] ? t(`status.${status}`) : kanbanTitle(status)) : t('chip.onKanban')
   })
 }
 
@@ -6426,7 +6416,7 @@ function ProgressChip({ item }) {
     onPointerDown: event => event.stopPropagation(),
     title: t('chip.reported', detail ? t('chip.reportedDetail', detail) : ''),
     type: 'button',
-    children: PROGRESS[state]
+    children: t(PROGRESS[state])
   })
 }
 
@@ -6666,7 +6656,7 @@ function Toolbar() {
                               place({ by: 'you', h: 96, kind: 'sticker', sticker: name, tilt: Math.round(Math.random() * 16 - 8), w: 96 })
                             }
                           },
-                          title: STICKERS[name].label,
+                          title: t(STICKERS[name].label),
                           type: 'button',
                           children: jsx(Sticker, { name, size: 36 })
                         },
