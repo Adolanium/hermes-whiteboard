@@ -113,7 +113,7 @@ Your Hermes Desktop  →  local board storage  →  your Hermes model (only when
 
 ## Languages
 
-Every string the page shows lives in `MESSAGES` at the top of `desktop/plugin.js` — one flat block per locale, the same keys in each. English and Chinese are filled in. A component asks for the translator once, `const t = usePluginI18n('whiteboard')`; handlers and other module-level code use `tr`. A message that counts things is a function, and it takes the same arguments in every locale.
+Every string the page shows lives in `MESSAGES` at the top of `desktop/plugin.js` — one flat block per locale, the same keys in each. English, Chinese and French are filled in. A component asks for the translator once, `const t = usePluginI18n('whiteboard')`; handlers and other module-level code use `tr`. A message that counts things is a function, and it takes the same arguments in every locale.
 
 To add a locale, copy the `en` block and translate the values. `node --test tests/i18n.test.mjs` fails when a key is missing from a locale, when a key does not resolve through the dot-path lookup Hermes uses, or when a component calls `t` without declaring it first — that last one blanks the whole page, so it is worth the check.
 

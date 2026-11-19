@@ -91,7 +91,7 @@ test('the plugin hands both locales to the app and the sidebar follows it', () =
     const { bundles, registrations } = load(locale)
 
     assert.ok(bundles, 'the bundles reach ctx.i18n.register')
-    assert.deepEqual(Object.keys(bundles).sort(), ['en', 'zh'])
+    assert.deepEqual(Object.keys(bundles).sort(), ['en', 'fr', 'zh'])
     assert.equal(labelOf(registrations, 'nav').data.label, expected)
     assert.equal(labelOf(registrations, 'page').title, expected)
   }
@@ -111,6 +111,21 @@ test('every English key has a Chinese one, and neither bundle carries a stray ke
   const zh = Object.keys(bundles.zh).sort()
 
   assert.deepEqual(zh, en)
+})
+
+test('every English key has a French one, and French agrees in number', () => {
+  const { bundles } = load('en')
+
+  assert.deepEqual(Object.keys(bundles.fr).sort(), Object.keys(bundles.en).sort())
+
+  const fr = load('fr')
+
+  assert.equal(labelOf(fr.registrations, 'nav').data.label, 'Tableau blanc')
+  assert.equal(fr.translate('toolbar.cardCount', 1), '1 carte')
+  assert.equal(fr.translate('toolbar.cardCount', 3), '3 cartes')
+  assert.equal(fr.translate('plan.agents', 1), ' · 1 agent')
+  assert.equal(fr.translate('plan.agents', 2), ' · 2 agents')
+  assert.equal(fr.translate('top.pulledBack', 1, 2), '1 ajout et 2 déplacements. Une seule annulation remet tout en place.')
 })
 
 test('a formatted message keeps its arguments in the same order', () => {
@@ -140,11 +155,11 @@ test('every component that looks up copy asks for the translator first', () => {
 })
 
 test('every key resolves through the nested lookup Hermes uses, in both languages', () => {
-  for (const locale of ['en', 'zh']) {
+  for (const locale of ['en', 'fr', 'zh']) {
     const { translate } = load(locale)
     const source = fs.readFileSync(new URL('../desktop/plugin.js', import.meta.url), 'utf8')
     const flat = source.slice(source.indexOf('const MESSAGES = {'), source.indexOf('function messageTree'))
-    const keys = [...new Set([...flat.matchAll(/^\s+'?([A-Za-z][\w.]*)'?: /gm)].map(match => match[1]))].filter(key => !['en', 'zh'].includes(key))
+    const keys = [...new Set([...flat.matchAll(/^\s+'?([A-Za-z][\w.]*)'?: /gm)].map(match => match[1]))].filter(key => !['en', 'fr', 'zh'].includes(key))
 
     assert.equal(keys.length > 50, true)
 
