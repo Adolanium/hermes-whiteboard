@@ -361,6 +361,7 @@ const MESSAGES = {
     'ago.hours': (n) => `${n} h ago`,
     'ago.minutes': (n) => `${n} min ago`,
     'chat.linkedTo': (t) => `Linked to "${t}".`,
+    'chat.suggestedChanges': (b) => `A chat suggested changes to ${b}`,
     'chat.turnDone': (ago, said) => `Its last turn finished ${ago}${said}`,
     'chat.turnFailed': (ago) => `Its last turn failed ${ago}.`,
     'chat.turnStopped': (ago) => `Its last turn was stopped ${ago}.`,
@@ -402,6 +403,343 @@ const MESSAGES = {
     'panel.fromChatPrefix': 'From a chat · ',
     'result.modelTip': 'The model picked in Settings did this',
     'top.aChat': 'a chat',
+  },
+  fr: {
+    nav: 'Tableau blanc',
+    openCommand: 'Ouvrir le tableau blanc',
+    appName: 'Tableau blanc',
+    appDescription: 'Un tableau blanc agentique. Dites à Hermes ce que vous préparez : il le met en forme, regroupe vos notes et envoie des agents réaliser les tâches.',
+    'empty.title': 'Mettez-le à plat.',
+    'empty.body': 'Dites à Hermes ce que vous préparez et il le met en forme. Posez des notes sur le tableau et il trouve les groupes. Confiez-lui une tâche et un agent la réalise ici même.',
+    'empty.tip': 'Ou double-cliquez n’importe où pour ajouter une note. Appuyez sur P pour dessiner.',
+    'starter.route': 'Préparer le lancement d’un produit en six semaines',
+    'starter.columns': 'Rétro de notre dernier sprint',
+    'starter.map': 'Idées pour un séminaire d’équipe',
+    'compose.placeholder': 'Dites à Hermes ce que vous préparez, il le met en forme',
+    'compose.askThis': 'Demander à Hermes à ce sujet',
+    'compose.askThese': n => `Demander à Hermes à propos de ces ${n} éléments`,
+    'compose.askingAbout': n => `Question sur ${n} élément${n > 1 ? 's' : ''} sélectionné${n > 1 ? 's' : ''}`,
+    'compose.ask': 'Demander',
+    'compose.lay': 'Mettre en forme',
+    'compose.anyShape': 'Forme libre',
+    'compose.enterHint': 'Entrée pour mettre en forme',
+    'compose.escHint': 'Échap pour mettre en forme',
+    'compose.askMissing': 'Que manque-t-il ?',
+    'compose.askFirst': 'Par quoi commencer ?',
+    'compose.askSum': 'Résume tout ça',
+    'panel.suggestions': 'Suggestions',
+    'panel.groupMine': 'Grouper mes notes',
+    'panel.reading': 'Hermes lit vos notes',
+    'panel.empty': 'Rien en attente. Cliquez sur Grouper mes notes, ou laissez une conversation proposer des changements une fois que les conversations peuvent lire vos tableaux. Chaque suggestion attend ici que vous l’acceptiez ou l’ignoriez.',
+    'tool.note': 'Note (N, ou double-clic sur le tableau)',
+    'tool.group': 'Groupe',
+    'tool.text': 'Texte',
+    'tool.pen': 'Dessiner (P)',
+    'tool.select': 'Sélectionner une zone, puis interroger Hermes dessus (L)',
+    'tool.hand': 'Confier à Hermes',
+    'tool.makeAction': 'En faire une tâche',
+    'tool.notAction': 'Ce n’est pas une tâche',
+    'tool.duplicate': 'Dupliquer (Cmd D)',
+    'tool.unlink': 'Retirer ses flèches',
+    'tool.delete': 'Supprimer (Retour arrière)',
+    'zoom.out': 'Dézoomer',
+    'zoom.in': 'Zoomer',
+    'zoom.fit': 'Ajuster au tableau',
+    'toast.nothingToRun': 'Rien à lancer pour l’instant. Marquez une note comme tâche, ou laissez Hermes en proposer avec Grouper mes notes.',
+    'layout.columns': 'Colonnes',
+    'layout.map': 'Carte',
+    'layout.route': 'Parcours',
+    'layoutHint.columns': 'Des groupes côte à côte, comme une rétro ou un plan par équipe',
+    'layoutHint.map': 'Des idées autour d’un centre, comme un brainstorming',
+    'layoutHint.route': 'Des étapes dans l’ordre le long d’une route, comme un lancement ou un voyage',
+    'tone.butter': 'Beurre',
+    'tone.peach': 'Pêche',
+    'tone.mint': 'Menthe',
+    'tone.sky': 'Ciel',
+    'tone.lilac': 'Lilas',
+    'tone.paper': 'Papier',
+    'group.newTitle': 'Nouveau groupe',
+    'activity.starting': 'Démarrage',
+    'ago.justNow': 'à l’instant',
+    'bullets.empty': 'Il n’y avait rien à décomposer dans ce résultat.',
+    'bullets.point': 'Un point du résultat',
+    'changes.inBox': 'Les changements sont dans la zone de message. Appuyez sur Entrée pour les envoyer.',
+    'chat.answerTip': 'La réponse de la conversation liée.',
+    'chat.answered': 'La conversation liée a répondu',
+    'chat.workingTurn': 'La conversation traite un tour en ce moment.',
+    'chip.archived': 'archivée',
+    'chip.askedTip': 'Ceci a été soumis à la conversation liée. Sa réponse reviendra sous forme de suggestion.',
+    'chip.askedWorkingTip': 'La conversation liée y travaille en ce moment. Sa réponse attendra dans Suggestions.',
+    'chip.chatDone': 'Conversation : terminé',
+    'chip.chatOnIt': 'La conversation s’en occupe',
+    'chip.chatWorking': 'La conversation travaille',
+    'chip.onKanban': 'Sur le Kanban',
+    'chip.kanbanStatus': (s) => `Kanban · ${s}`,
+    'chip.open': 'Ouvrir',
+    'compose.layingOut': 'met en forme',
+    'error.closed': 'Hermes s’est fermé avant la fin.',
+    'error.noSession': 'Hermes n’a pas renvoyé de session.',
+    'error.stopped': 'arrêté',
+    'export.asTable': 'Exporter le tableau en feuille de calcul',
+    'handoff.ask': 'Demander dans la conversation liée',
+    'handoff.askNote': 'Ouvre la conversation avec la demande rédigée. C’est vous qui l’envoyez, et la conversation garde ses propres validations.',
+    'handoff.copied': 'La demande est copiée. Collez-la dans la conversation.',
+    'handoff.seated': 'La demande est dans la zone de message. Appuyez sur Entrée pour l’envoyer.',
+    'handoff.separate': 'Lancer un travail séparé ici',
+    'handoff.separateNote': 'De nouveaux agents Hermes s’en chargent depuis le tableau. La conversation n’est pas prévenue.',
+    'kanbanBoards.loading': 'Récupération des tableaux Kanban...',
+    'kanbanBoards.open': 'ouvert',
+    'kanbanBoards.pickNote': 'Choisissez d’abord une note qui contient du texte.',
+    'kanbanBoards.startOffNote': 'Désactivé : elles restent dans Bloqué et rien ne tourne tant que vous ne les débloquez pas.',
+    'kanbanBoards.startOnNote': 'Elles partent en Tri. Hermes découpe chacune en tâches et ses agents démarrent, avec votre modèle.',
+    'model.hermesDefault': 'Par défaut (Hermes)',
+    'model.none': 'Hermes n’a listé aucun modèle auquel vous êtes connecté.',
+    'model.notListed': ' (plus listé par Hermes)',
+    'note.again': 'Relancer',
+    'note.agentTip': 'Un agent Hermes s’en charge et livre le résultat ici',
+    'note.retry': 'Réessayer',
+    'note.stop': 'Arrêter',
+    'note.waitingAgent': 'En attente d’un agent libre',
+    'notify.boardMade': 'Hermes a créé un tableau',
+    'panel.hermesSuggests': 'Hermes propose',
+    'picker.empty': 'Aucune conversation dans ce profil Hermes pour l’instant.',
+    'picker.intro': 'Liez ce tableau à la conversation où se fait son travail :',
+    'picker.loading': 'Récupération de vos conversations...',
+    'plan.looseEnds': 'Points en suspens',
+    'plan.writingBrief': 'Rédaction de la synthèse',
+    'proposal.fromChat': 'Depuis une conversation',
+    'result.unpack': 'Décomposer en notes',
+    'result.unpackTip': 'Hermes en tire des notes et des prochaines étapes, à accepter une par une',
+    'result.unpacking': 'Décomposition',
+    'stale.notesGone': 'La plupart de ces notes ont disparu.',
+    'status.blocked': 'Bloqué',
+    'status.delivered': 'Livré',
+    'status.done': 'Terminé',
+    'status.ready': 'Prêt',
+    'status.review': 'En revue',
+    'status.running': 'En cours',
+    'status.todo': 'À faire',
+    'status.triage': 'Tri',
+    'sticker.access': 'Accès',
+    'sticker.break': 'Pause',
+    'sticker.bug': 'Bug',
+    'sticker.build': 'Construire',
+    'sticker.calendar': 'Calendrier',
+    'sticker.delivery': 'Livraison',
+    'sticker.docs': 'Docs',
+    'sticker.done': 'Terminé',
+    'cursor.verb': (v) => `Hermes · ${v}`,
+    'cursor.stop': (i, n) => `Hermes · étape ${i} sur ${n}`,
+    'cursor.answered': 'Hermes · a répondu',
+    'cursor.brief': 'Hermes · rédige la synthèse',
+    'cursor.browsing': 'navigue',
+    'cursor.delivered': 'Hermes · livré',
+    'cursor.reading': 'Hermes · lit',
+    'cursor.searching': 'cherche',
+    'cursor.starting': 'Hermes · démarre',
+    'cursor.thinking': 'Hermes · réfléchit',
+    'cursor.working': 'travaille',
+
+    'sticker.flag': 'Drapeau',
+    'sticker.gift': 'Cadeau',
+    'sticker.growth': 'Croissance',
+    'sticker.hermes': 'Hermes',
+    'sticker.idea': 'Idée',
+    'sticker.launch': 'Lancement',
+    'sticker.love': 'Amour',
+    'sticker.mail': 'Courrier',
+    'sticker.media': 'Média',
+    'sticker.money': 'Argent',
+    'sticker.people': 'Personnes',
+    'sticker.place': 'Lieu',
+    'sticker.research': 'Recherche',
+    'sticker.risk': 'Risque',
+    'sticker.rocket': 'Fusée',
+    'sticker.safety': 'Sécurité',
+    'sticker.sales': 'Ventes',
+    'sticker.spark': 'Étincelle',
+    'sticker.star': 'Étoile',
+    'sticker.talk': 'Discussion',
+    'sticker.target': 'Cible',
+    'sticker.time': 'Temps',
+    'sticker.travel': 'Voyage',
+    'sticker.win': 'Victoire',
+    'suggest.answer': 'Réponse',
+    'takeBack.already': 'Déjà annulé.',
+    'takeBack.changed': 'Quelque chose les a modifiés depuis. Utilisez plutôt Annuler.',
+    'tidy.needNotes': 'Ajoutez d’abord quelques notes. Hermes regroupe ce qui est sur le tableau.',
+    'toast.dismiss': 'Fermer',
+    'top.agentHint': 'Fait le travail : Confier à Hermes, Run the route et Demander.',
+    'top.agentModel': 'Modèle des agents',
+    'top.export': 'Exporter',
+    'top.kanbanChanged': 'Kanban modifié · Actualiser',
+    'top.kanbanIntro': 'Disposer un tableau Kanban dans un nouveau tableau blanc :',
+    'top.linkedBoard': 'Ce tableau est lié à une conversation',
+    'top.linkedWorking': 'La conversation liée travaille en ce moment',
+    'top.needNotes': 'Ajoutez d’abord quelques notes',
+    'top.planningHint': 'Met en forme les tableaux, regroupe les notes, décompose les résultats et rédige la synthèse.',
+    'top.planningModel': 'Modèle de planification',
+    'top.settings': 'Réglages',
+    'top.tidyTip': 'Hermes propose des groupes, des responsables et des tâches. Vous acceptez ou ignorez chaque proposition.',
+    'ago.days': (n) => `il y a ${n} j`,
+    'ago.hours': (n) => `il y a ${n} h`,
+    'ago.minutes': (n) => `il y a ${n} min`,
+    'chat.linkedTo': (t) => `Lié à « ${t} ».`,
+    'chat.turnDone': (ago, said) => `Son dernier tour s’est terminé ${ago}${said}`,
+    'chat.turnFailed': (ago) => `Son dernier tour a échoué ${ago}.`,
+    'chat.turnStopped': (ago) => `Son dernier tour a été arrêté ${ago}.`,
+    'chip.cardArchived': (i, b) => `La carte ${i} n’est plus sur le tableau Kanban ${b}. Elle y a été archivée.`,
+    'chip.cardTitle': (i, b, c) => `Carte ${i} sur le tableau Kanban ${b}${c}`,
+    'chip.reported': (d) => `La conversation liée a signalé ceci${d}. Cliquez pour l’effacer.`,
+    'chip.reportedDetail': (d) => ` : ${d}`,
+    'compose.activity': (a) => ` · ${a}`,
+    'compose.working': (v, r, a) => `Hermes ${v} « ${r} »${a}`,
+    'error.listModels': (e) => `Hermes n’a pas pu lister vos modèles : ${e}`,
+    'error.maxSteps': (n) => `Arrêté après ${n} appels d’outils sans avoir terminé.`,
+    'error.noAnswer': (s) => `Aucune réponse après ${s} secondes, l’exécution a été arrêtée.`,
+    'error.save': (e) => `Le tableau blanc n’a pas pu enregistrer : ${e}`,
+    'error.turnEnded': (s) => `Le tour s’est terminé avec l’état ${s}.`,
+    'handoff.planItems': (n) => (n === 1 ? 'l’élément ouvert de ce plan' : `les ${n} éléments ouverts de ce plan`),
+    'handoff.question': (c, w) => `« ${c} » s’occupe déjà de ce travail. Où envoyer ${w} ?`,
+    'handoff.theseNotes': (n) => `ces ${n} notes`,
+    'plan.agents': (n) => ` · ${n} agent${n > 1 ? 's' : ''}`,
+    'plan.intro': (n) => `Hermes parcourt le tableau étape par étape et ses agents réalisent ${n === 1 ? 'la tâche ouverte' : `les ${n} tâches ouvertes`}, chacune s’appuyant sur la précédente`,
+    'plan.stopLine': (i, n, l, a) => `Étape ${i} sur ${n} · ${l}${a}`,
+    'result.doneBy': (m) => `Réalisé par ${m}`,
+    'result.used': (f) => `A utilisé ${f}`,
+    'result.youAsked': (q) => `Votre question : ${q}`,
+    'toolbar.cardCount': (n) => `${n} carte${n > 1 ? 's' : ''}`,
+    'toolbar.makeCards': (n) => `Créer ${n === 1 ? 'une carte' : `${n} cartes`} sur :`,
+    'toolbar.sentOff': (c, n) => `${c} en attente dans Bloqué sur ${n}. Rien ne tourne tant que vous ne les y débloquez pas.`,
+    'toolbar.sentOn': (c, n) => `${c} en Tri sur ${n}. Hermes va les découper en tâches et se mettre au travail.`,
+    'top.belongs': (c) => `Ce tableau appartient au travail de « ${c} ». Confier à Hermes et Run the route demandent votre accord avant de démarrer un travail séparé.`,
+    'top.deleteConfirm': (n) => `Supprimer « ${n} » ? Cette action est irréversible.`,
+    'top.kanbanDrift': (n, b) => `${n} carte${n > 1 ? 's ont été déplacées ou ajoutées' : ' a été déplacée ou ajoutée'} sur le tableau Kanban ${b}`,
+    'top.kanbanLaidOut': (n) => `${n} carte${n > 1 ? 's disposées' : ' disposée'}. C’est une copie : les changements faits ici ne repartent pas vers Kanban.`,
+    'top.linkedUnheard': (n) => `Ce tableau est lié à une conversation. ${n} changement${n > 1 ? 's faits ici ne lui sont pas encore parvenus' : ' fait ici ne lui est pas encore parvenu'}`,
+    'top.pulledBack': (a, m) => `${a} ajout${a > 1 ? 's' : ''} et ${m} déplacement${m > 1 ? 's' : ''}. Une seule annulation remet tout en place.`,
+    'top.shareOff': (n) => `${n} changement${n > 1 ? 's faits ici n’ont' : ' fait ici n’a'} pas atteint la conversation. Avec « Chats can read my boards » activé, ${n > 1 ? 'ils partent' : 'il part'} avec votre prochain message là-bas.`,
+    'top.shareOn': (n) => `${n} changement${n > 1 ? 's faits ici partent' : ' fait ici part'} vers la conversation avec votre prochain message là-bas.`,
+    'chip.checkedNow': ', vérifié tant que cette page est ouverte',
+    'compose.answering': 'répond à',
+    'handoff.thisNote': 'cette note',
+    'panel.fromChatPrefix': 'Depuis une conversation · ',
+    'result.modelTip': 'Le modèle choisi dans les réglages a réalisé ceci',
+    'top.aChat': 'une conversation',
+    'board.untitled': 'Tableau sans titre',
+    'canvas.portTip': 'Glissez vers un autre élément pour tracer une flèche',
+    'canvas.resizeTip': 'Glissez pour redimensionner',
+    'chat.cannotOpen': 'Cette version d’Hermes ne peut pas ouvrir une conversation depuis le tableau blanc. Mettez à jour Hermes Desktop.',
+    'chat.copiedChanges': 'Les changements sont copiés. Collez-les dans la conversation.',
+    'chat.fallbackTitle': 'Conversation liée',
+    'chat.messageBoxRefused': 'La conversation s’est ouverte, mais sa zone de message n’a pas accepté la demande. Saisissez-la vous-même.',
+    'chat.notLinked': 'Ce tableau n’est lié à aucune conversation.',
+    'chat.nothingNew': 'Rien de nouveau à dire à la conversation.',
+    'chat.suggestedChanges': (b) => `Une conversation a proposé des changements pour ${b}`,
+    'chat.untitled': 'Conversation sans titre',
+    'chat.workingShort': 'en cours',
+    'chip.suggestedInChat': 'Proposé dans une conversation',
+    'compose.thinkingItThrough': 'Réflexion en cours',
+    'error.approvalDenied': 'autorisation refusée',
+    'error.couldNot': (a) => `Le tableau blanc n’a pas pu ${a}`,
+    'error.noAnswerText': 'Hermes a terminé, mais n’a envoyé aucun texte de réponse et rien n’a été enregistré pour cette exécution. Réessayez.',
+    'error.reported': 'Hermes a signalé une erreur.',
+    'error.timedOut': 'délai dépassé',
+    'export.backendDown': 'Le backend du tableau blanc ne tourne pas. Activez le plugin Whiteboard dans Capacités > Plugins, puis réessayez.',
+    'export.clipboardUnavailable': 'Le presse-papiers n’est pas disponible dans cet environnement.',
+    'export.copiedMarkdown': 'Tableau copié en Markdown',
+    'export.copiedTable': 'Copié en tableau. Collez-le dans Hermes Sheets ou n’importe quel tableur.',
+    'export.copyMarkdown': 'Copier en Markdown',
+    'export.copyTable': 'Copier en tableau pour Sheets',
+    'export.menuTitle': 'Exporter le tableau',
+    'export.saveCsv': 'Enregistrer en CSV',
+    'export.saveMarkdown': 'Enregistrer en Markdown',
+    'export.saveUnavailable': 'L’enregistrement n’est pas disponible dans cet environnement.',
+    'export.savedTo': (p) => `Enregistré dans ${p}`,
+    'export.writeFailed': 'Hermes n’a pas pu écrire ce fichier.',
+    'group.untitled': 'Groupe sans titre',
+    'handoff.cancel': 'Annuler',
+    'handoff.startOnThem': 'Laisser Hermes commencer dessus',
+    'handoff.theLinkedChat': 'la conversation liée',
+    'kanban.backendDown': 'Le backend du tableau blanc ne tourne pas, il ne peut donc pas joindre Kanban.',
+    'kanban.backendOld': 'Le tableau blanc a été mis à jour, mais son backend est encore sur l’ancienne version et ne peut pas encore joindre Kanban. Redémarrez la passerelle Hermes pour terminer la mise à jour.',
+    'kanban.backendProfile': 'Le backend du tableau blanc ne tourne pas dans ce profil Hermes, il ne peut donc pas joindre Kanban. Installez Whiteboard pour ce profil et activez-le dans Capacités > Plugins.',
+    'kanban.noAnswer': 'Kanban n’a pas répondu. Quittez Hermes Desktop, rouvrez-le, puis réessayez.',
+    'kanban.noCards': 'Ce tableau Kanban n’a aucune carte à disposer.',
+    'kanban.notFromKanban': 'Ce tableau n’a pas été créé depuis Kanban.',
+    'link.failed': 'Le tableau blanc n’a pas pu ouvrir ce lien',
+    'menu.deleteBoard': 'Supprimer le tableau',
+    'menu.kanbanInLine': 'Déjà à jour avec Kanban.',
+    'menu.linkAnother': 'Lier à une autre conversation',
+    'menu.linkThisBoard': 'Lier ce tableau à une conversation',
+    'menu.newBoard': 'Nouveau tableau',
+    'menu.newFromKanban': 'Nouveau tableau depuis Kanban',
+    'menu.openChat': 'Ouvrir la conversation',
+    'menu.refreshKanban': 'Actualiser depuis Kanban',
+    'menu.rename': 'Renommer',
+    'menu.tellChat': 'Prévenir la conversation maintenant',
+    'menu.unlink': 'Délier',
+    'model.refusal': (role, model, detail) => `Le modèle ${role} ${model} n’est pas disponible dans Hermes.${detail ? ` Hermes a dit : ${detail}` : ''} Choisissez-en un autre dans les Réglages.`,
+    'model.roleAgent': 'des agents',
+    'model.roleChosen': 'choisi',
+    'model.rolePlanning': 'de planification',
+    'note.actionChip': 'Tâche',
+    'note.done': 'Fait',
+    'note.empty': 'Note vide',
+    'note.gone': 'Cette note a disparu.',
+    'note.working': 'En cours',
+    'panel.noSuggestions': 'Hermes n’avait aucune suggestion utilisable sur cette page. Réessayez ou ajoutez quelques notes de plus.',
+    'plan.noBoard': 'Hermes n’a pas renvoyé de tableau que cette page peut dessiner. Essayez de formuler autrement.',
+    'plan.runPlan': 'Lancer le plan',
+    'plan.runRoute': 'Lancer le parcours',
+    'proposal.accept': 'Accepter',
+    'proposal.acceptAll': 'Tout accepter',
+    'proposal.accepted': 'Accepté',
+    'proposal.clear': 'Effacer',
+    'proposal.close': 'Fermer',
+    'proposal.noLongerApplies': 'Ne s’applique plus',
+    'proposal.putBack': 'Remettre comme avant',
+    'proposal.skip': 'Ignorer',
+    'proposal.skipped': 'Ignoré',
+    'proposal.takeBack': 'Revenir en arrière',
+    'proposal.takenBack': 'Annulé',
+    'proposal.tidySummary': 'Hermes propose une façon de regrouper vos notes',
+    'run.copyBoard': 'copier le tableau',
+    'run.copyTable': 'copier le tableau en feuille',
+    'run.exportBoard': 'exporter le tableau',
+    'run.exportTable': 'exporter la feuille',
+    'run.layOutKanban': 'disposer ce tableau Kanban',
+    'run.makeBoard': 'créer un tableau',
+    'run.openChat': 'ouvrir cette conversation',
+    'run.refreshKanban': 'actualiser depuis Kanban',
+    'run.tellChat': 'prévenir la conversation',
+    'settings.askedInChat': 'Demandé en conversation',
+    'settings.askingModels': 'Recherche de vos modèles dans Hermes...',
+    'settings.chatToolsMissing': 'Les outils de conversation du tableau blanc ne tournent pas dans ce profil Hermes. Hermes installe et active les plugins séparément pour chaque profil : installez Whiteboard pour ce profil aussi et activez-le dans Capacités > Plugins. Le tableau lui-même fonctionne sans eux.',
+    'settings.modelsIntro': 'Voici les modèles auxquels vous êtes connecté dans Hermes. Chacun est facturé par son propre fournisseur. Si Hermes ne peut pas utiliser un modèle choisi, l’exécution s’arrête et l’indique.',
+    'settings.shareBody': 'Désactivé jusqu’à ce que vous l’activiez. Une fois activé, toute conversation Hermes peut lire vos tableaux et proposer des changements, qui attendent ici votre accord. Une copie de chaque tableau est conservée dans les données du plugin du profil Hermes courant. Le désactiver supprime ces copies, et celles des autres profils la prochaine fois que vous ouvrez Hermes dessus.',
+    'settings.shareTitle': 'Les conversations peuvent lire mes tableaux',
+    'status.planDelivered': 'Plan livré',
+    'suite.fromAnother': 'une autre page',
+    'suite.fromAnotherOther': 'Une autre page',
+    'suite.fromBoard': 'un tableau',
+    'suite.fromPage': (p) => `Depuis ${p}`,
+    'suite.pinned': (p, n) => `${p} a épinglé ${n} note${n > 1 ? 's' : ''}. Annuler les retire.`,
+    'tool.redo': 'Rétablir (Maj Cmd Z)',
+    'tool.sendKanban': 'Envoyer vers Kanban',
+    'tool.sticker': 'Autocollant',
+    'tool.undo': 'Annuler (Cmd Z)',
+    'toolbar.penTone': (tone) => `Stylo ${tone}`,
+    'verb.browsing': 'Navigation',
+    'verb.lookingAt': 'Consultation',
+    'verb.opening': 'Ouverture',
+    'verb.reading': 'Lecture',
+    'verb.running': 'Exécution',
+    'verb.runningCode': 'Exécution de code',
+    'verb.searching': 'Recherche',
+    'verb.searchingFiles': 'Recherche de fichiers',
+    'verb.using': (name) => `Utilisation de ${name}`,
+    'verb.working': 'Travail en cours',
   },
   zh: {
     'board.untitled': '未命名白板',
@@ -698,6 +1036,7 @@ const MESSAGES = {
     'ago.hours': (n) => `${n} 小时前`,
     'ago.minutes': (n) => `${n} 分钟前`,
     'chat.linkedTo': (t) => `已关联「${t}」。`,
+    'chat.suggestedChanges': (b) => `会话为${b}提出了更改建议`,
     'chat.turnDone': (ago, said) => `上一轮在${ago}完成${said}`,
     'chat.turnFailed': (ago) => `上一轮在${ago}失败了。`,
     'chat.turnStopped': (ago) => `上一轮在${ago}被停止。`,
@@ -1918,6 +2257,7 @@ function parseBoardSpec(value, preferred) {
     .filter(section => section && typeof section === 'object' && clean(section.title, 60))
     .slice(0, 8)
     .map(section => ({
+      ...(clean(section.kanbanStatus, 40) ? { kanbanStatus: clean(section.kanbanStatus, 40) } : {}),
       label: clean(section.label, 24) || undefined,
       notes: (Array.isArray(section.notes) ? section.notes : [])
         .map(note => (typeof note === 'string' ? { text: note } : note))
@@ -2062,7 +2402,7 @@ function layoutSpec(spec, origin = { x: 0, y: 0 }) {
     spec.sections.forEach(section => {
       const cols = section.notes.length > 3 ? 2 : 1
       const size = frameSize(Math.max(1, section.notes.length), cols, section.title)
-      const frame = { ...size, id: uid('f'), kind: 'frame', rev: rev(), sticker: section.sticker, title: section.title, x, y: origin.y + 120 }
+      const frame = { ...size, id: uid('f'), ...(section.kanbanStatus ? { kanbanStatus: section.kanbanStatus } : {}), kind: 'frame', rev: rev(), sticker: section.sticker, title: section.title, x, y: origin.y + 120 }
 
       items.push(frame)
       frameSlots(frame, section.notes.length, cols).forEach((slot, n) => items.push(noteFromSpec(section.notes[n], { ...slot, frame: frame.id })))
@@ -4575,6 +4915,28 @@ async function refreshKanbanStatus() {
 }
 
 const kanbanTitle = status => kanbanColumn(status)
+const kanbanStatusKey = status => clean(status, 40).toLowerCase()
+const kanbanMatchesFrame = (frame, status) => {
+  if (!frame || frame.kind !== 'frame') {
+    return false
+  }
+
+  const key = kanbanStatusKey(status)
+
+  if (frame.kanbanStatus) {
+    return kanbanStatusKey(frame.kanbanStatus) === key
+  }
+
+  const title = clean(frame.title, 60).toLowerCase()
+
+  if (title === kanbanTitle(status).toLowerCase()) {
+    return true
+  }
+
+  const english = KANBAN_COLUMNS[status] ? String(MESSAGES.en[`status.${status}`] || '').toLowerCase() : ''
+
+  return Boolean(english) && title === english
+}
 
 /** Bring a whiteboard made from Kanban in line with a fresh read of that Kanban
  *  board: a note for every new card, and each note in the column of its card's
@@ -4587,14 +4949,15 @@ function syncFromKanban(board, read) {
   const touched = new Set()
   const frameFor = status => {
     const title = kanbanTitle(status)
-    let frame = items.find(item => item.kind === 'frame' && clean(item.title, 60).toLowerCase() === title.toLowerCase())
+    let frame = items.find(item => kanbanMatchesFrame(item, status))
 
     if (!frame) {
       const frames = items.filter(item => item.kind === 'frame')
       const size = frameSize(1, 1, title)
       const spot = frames.length > 0 ? { x: Math.max(...frames.map(item => item.x + item.w)) + GAP * 2, y: Math.min(...frames.map(item => item.y)) } : freeSpot({ ...board, items }, size.w, size.h)
+      const kanbanStatus = clean(status, 40)
 
-      frame = { ...size, by: 'hermes', id: uid('f'), kind: 'frame', rev: rev(), title, x: spot.x, y: spot.y }
+      frame = { ...size, by: 'hermes', id: uid('f'), ...(kanbanStatus ? { kanbanStatus } : {}), kind: 'frame', rev: rev(), title, x: spot.x, y: spot.y }
       items = [...items, frame]
     }
 
@@ -4663,12 +5026,10 @@ function kanbanDrift(board, read) {
   let count = 0
 
   for (const column of read.columns) {
-    const title = kanbanTitle(column.status).toLowerCase()
-
     for (const card of Array.isArray(column.cards) ? column.cards : []) {
       const note = board.items.find(item => item.kind === 'note' && item.kanban?.id === String(card?.id) && String(item.kanban.board) === String(read.board))
 
-      if (!note ? Boolean(clean(card?.title, 200)) : clean(lookup.get(note.frame)?.title, 60).toLowerCase() !== title) {
+      if (!note ? Boolean(clean(card?.title, 200)) : !kanbanMatchesFrame(lookup.get(note.frame), column.status)) {
         count += 1
       }
     }
@@ -4707,7 +5068,7 @@ async function refreshFromKanban() {
 /** A Kanban board as a board spec: one column per status that has cards. */
 function kanbanSpec(read) {
   const sections = (Array.isArray(read?.columns) ? read.columns : [])
-    .map(column => ({ notes: (Array.isArray(column.cards) ? column.cards : []).map(card => clean(card?.title, 200)).filter(Boolean), status: column.status, title: kanbanColumn(column.status) }))
+    .map(column => ({ kanbanStatus: clean(column.status, 40) || undefined, notes: (Array.isArray(column.cards) ? column.cards : []).map(card => clean(card?.title, 200)).filter(Boolean), status: column.status, title: kanbanColumn(column.status) }))
     .filter(section => section.title && section.notes.length > 0)
 
   // A board needs two columns. When every card has the same status, the next
@@ -4717,7 +5078,7 @@ function kanbanSpec(read) {
     const at = order.indexOf(sections[0].status)
     const beside = at < 0 ? 'todo' : order[at + 1] || order[at - 1]
 
-    sections[at >= 0 && at === order.length - 1 ? 'unshift' : 'push']({ notes: [], status: beside, title: kanbanColumn(beside) })
+    sections[at >= 0 && at === order.length - 1 ? 'unshift' : 'push']({ kanbanStatus: beside, notes: [], status: beside, title: kanbanColumn(beside) })
   }
 
   return sections.length > 0 ? parseBoardSpec({ layout: 'columns', sections, title: `${clean(read.name || 'Kanban', 60)}, from Kanban` }) : null
@@ -4802,7 +5163,7 @@ function takeChatEntry(entry) {
     storage?.set(boardKey(stored.id), { ...stored, proposals: [...stored.proposals, proposal] })
   }
 
-  $toast.set({ kind: 'info', text: `A chat suggested changes to ${clean(entry.boardName || tr('suite.fromBoard'), 60)}` })
+  $toast.set({ kind: 'info', text: tr('chat.suggestedChanges', clean(entry.boardName || tr('suite.fromBoard'), 60)) })
 
   return 'taken'
 }
