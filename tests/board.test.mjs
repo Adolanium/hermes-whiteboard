@@ -11,11 +11,18 @@ function load(options = {}) {
     .replace(/import\s*\{[^}]+\}\s*from 'react\/jsx-runtime'\r?\n/, '')
     .replace('export default {', 'globalThis.plugin = {')
     .concat(`
+      if (globalThis.__locale) {
+        const bundle = MESSAGES[globalThis.__locale]
+        tr = (key, ...args) => {
+          const value = bundle?.[key] ?? MESSAGES.en[key]
+          return typeof value === 'function' ? value(...args) : (value ?? key)
+        }
+      }
       if (globalThis.__os) pluginOs = globalThis.__os
       if (globalThis.__rest) pluginRest = globalThis.__rest
       if (globalThis.__storage) storage = globalThis.__storage
       globalThis.__wb = {
-        $board, $editing, $index, $selection, STICKER_NAMES, applyProposalItem, boardMarkdown, boundsOf, centerOf, decideProposal,
+        $board, $editing, $index, $selection, $toast, STICKER_NAMES, applyProposalItem, boardMarkdown, boundsOf, centerOf, decideProposal,
         $tool, liftTitle, routeResultSpot, addArrow, askScope, boardTable, bulletsOf, cloneItems, duplicateSelection, edgePoint, inkFromPoints, openActionCount,
         pathFractions, planStops, removeArrows, resizeItem, suggestedNotes, toDelimited, toggleAction, withChildren,
         emptyBoard, exportBoard, fitFrames, frameSlots, hydrate, inside, lastJsonObject, layoutSpec, makeNote, moveItems,
@@ -45,6 +52,7 @@ function load(options = {}) {
     Math,
     Object,
     setTimeout: options.setTimeout || (() => 1),
+    __locale: options.locale,
     __os: options.os,
     __rest: options.rest,
     __storage: options.storage
@@ -1621,6 +1629,72 @@ test('Refresh from Kanban moves notes to their card\'s new status and adds new c
 
   wb.setBoard({ ...wb.$board.get(), fromKanban: undefined })
   await assert.rejects(wb.refreshFromKanban(), /not made from Kanban/)
+})
+
+test('a Kanban board made in English refreshes in Chinese without duplicating columns', async () => {
+  const state = {
+    read: {
+      board: 'launch',
+      columns: [
+        { cards: [{ id: 't_1', title: 'Book the venue' }, { id: 't_2', title: 'Order flyers' }], status: 'todo' },
+        { cards: [{ id: 't_3', title: 'Pick a date' }], status: 'done' }
+      ],
+      name: 'Launch plan',
+      ok: true
+    }
+  }
+  const storage = memoryStorage()
+  const rest = async () => state.read
+  const en = load({ locale: 'en', rest, storage })
+
+  en.hydrate(storage)
+  await en.boardFromKanban('launch')
+
+  const enFrames = en.$board.get().items.filter(item => item.kind === 'frame')
+  assert.deepEqual(plain(enFrames.map(frame => [frame.title, frame.kanbanStatus])), [['To do', 'todo'], ['Done', 'done']])
+
+  // Reopen the same saved board in Chinese: no false drift and no duplicate columns.
+  const zh = load({ locale: 'zh', rest, storage })
+  zh.hydrate(storage)
+  assert.equal(zh.kanbanDrift(zh.$board.get(), state.read), 0)
+  assert.deepEqual(plain(await zh.refreshFromKanban()), { added: 0, moved: 0 })
+  assert.equal(zh.$board.get().items.filter(item => item.kind === 'frame').length, 2)
+
+  // Moving a card to Done reuses the existing Done frame rather than creating a Chinese duplicate.
+  state.read = {
+    board: 'launch',
+    columns: [
+      { cards: [{ id: 't_2', title: 'Order flyers' }], status: 'todo' },
+      { cards: [{ id: 't_1', title: 'Book the venue' }, { id: 't_3', title: 'Pick a date' }], status: 'done' }
+    ],
+    name: 'Launch plan',
+    ok: true
+  }
+  assert.equal(zh.kanbanDrift(zh.$board.get(), state.read), 1)
+  assert.deepEqual(plain(await zh.refreshFromKanban()), { added: 0, moved: 1 })
+  assert.equal(zh.$board.get().items.filter(item => item.kind === 'frame').length, 2)
+  assert.equal(zh.kanbanDrift(zh.$board.get(), state.read), 0)
+
+  // Legacy boards without frame.kanbanStatus still match their English column titles in Chinese.
+  const legacy = {
+    ...zh.$board.get(),
+    items: zh.$board.get().items.map(item => (item.kind === 'frame' ? { ...item, kanbanStatus: undefined } : item))
+  }
+  zh.setBoard(legacy)
+  assert.equal(zh.kanbanDrift(zh.$board.get(), state.read), 0)
+  assert.deepEqual(plain(await zh.refreshFromKanban()), { added: 0, moved: 0 })
+  assert.equal(zh.$board.get().items.filter(item => item.kind === 'frame').length, 2)
+})
+
+test('takeChatEntry localizes its suggestion toast', () => {
+  for (const [locale, expected] of [['fr', 'Une conversation a proposé des changements pour Lancement'], ['zh', '会话为Lancement提出了更改建议']]) {
+    const storage = memoryStorage()
+    const wb = load({ locale, storage })
+    wb.hydrate(storage)
+    const id = wb.$board.get().id
+    assert.equal(wb.takeChatEntry({ board: id, boardName: 'Lancement', id: 'e1', notes: [{ text: 'Check dates' }], summary: 'One idea' }), 'taken')
+    assert.equal(wb.$toast.get().text, expected)
+  }
 })
 
 test('a note shows where its Kanban card is now, and a card that is gone reads as archived', async () => {
